@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.accounting_app"
-    compileSdk = 36 // الإصدار الذي اخترته
+    compileSdk = 36
 
     ndkVersion = flutter.ndkVersion
 
@@ -15,14 +15,17 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
+    // التحديث المطلوب بدلاً من kotlinOptions القديمة
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
     }
 
     defaultConfig {
         applicationId = "com.example.accounting_app"
         minSdk = flutter.minSdkVersion
-        targetSdk = 36 // يجب أن يطابق compileSdk لتجنب مشاكل التوافق
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -30,7 +33,6 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
-            // إضافة خاصية لضمان عدم حدوث مشاكل في المسارات كما اكتشفنا سابقاً
             isMinifyEnabled = false
             isShrinkResources = false
         }
