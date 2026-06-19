@@ -33,7 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         setState(() => _backupFiles = files);
       }
     } catch (e) {
-      // تجاهل الأخطاء
+      // تجاهل ا��أخطاء
     }
   }
 
