@@ -9,11 +9,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  url_launcher: ^6.3.0   # 👈 أضف هذه
+  url_launcher: ^6.3.0
   google_sign_in: ^6.2.1
-  http: ^1.2.0   # 👈 أضف هذا
+  http: ^1.2.0
   extension_google_sign_in_as_googleapis_auth: ^2.0.10
   googleapis: ^13.1.0
+  
   # دعم اللغة العربية والترجمة
   flutter_localizations:
     sdk: flutter
@@ -32,8 +33,11 @@ dependencies:
   # طباعة وتصدير PDF
   pdf: ^3.13.0
   printing: ^5.15.0
-  file_picker: ^11.0.2  
-  share_plus: ^10.0.0
+  
+  # اختيار الملفات والمشاركة (بمسافات صحيحة)
+  file_picker: ^11.0.2
+  share_plus: ^13.1.0
+
   # خطوط جميلة
   google_fonts: ^8.1.0
 
