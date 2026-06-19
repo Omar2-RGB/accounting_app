@@ -34,9 +34,9 @@ dependencies:
   pdf: ^3.13.0
   printing: ^5.15.0
   
-  # اختيار الملفات والمشاركة - updated to latest versions
+  # اختيار الملفات والمشاركة - compatible versions
   file_picker: ^11.0.2
-  share_plus: ^13.1.0
+  share_plus: ^10.1.4
   # خطوط جميلة
   google_fonts: ^8.1.0
 
