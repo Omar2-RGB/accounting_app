@@ -36,8 +36,7 @@ dependencies:
   
   # اختيار الملفات والمشاركة (بمسافات صحيحة)
   file_picker: ^11.0.2
-  share_plus: ^13.1.0
-
+  share_plus: ^10.1.4
   # خطوط جميلة
   google_fonts: ^8.1.0
 
