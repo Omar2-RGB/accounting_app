@@ -22,3 +22,13 @@ subprojects {
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
+
+// الكود المضاف لإجبار جميع المكتبات والإضافات على استخدام الإصدار 36
+subprojects {
+    afterEvaluate {
+        val androidExt = project.extensions.findByName("android")
+        if (androidExt != null) {
+            (androidExt as com.android.build.gradle.BaseExtension).compileSdkVersion(36)
+        }
+    }
+}

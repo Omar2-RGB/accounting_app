@@ -9,7 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+  url_launcher: ^6.3.0   # 👈 أضف هذه
+  google_sign_in: ^6.2.1
+  http: ^1.2.0   # 👈 أضف هذا
+  extension_google_sign_in_as_googleapis_auth: ^2.0.10
+  googleapis: ^13.1.0
   # دعم اللغة العربية والترجمة
   flutter_localizations:
     sdk: flutter

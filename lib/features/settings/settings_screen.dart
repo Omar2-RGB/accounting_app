@@ -1,9 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:googleapis/drive/v3.dart' as drive;
 import '../../core/theme/app_colors.dart';
 import '../../services/backup_service.dart';
+import '../../services/google_drive_service.dart';
 import '../auth/login_screen.dart';
+import 'about_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -14,6 +17,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoading = false;
+  bool _isSyncing = false;
   List<File> _backupFiles = [];
 
   @override
@@ -104,6 +108,120 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // ===== دوال المزامنة مع Google Drive =====
+  Future<void> _uploadToDrive() async {
+    setState(() => _isSyncing = true);
+    try {
+      final backupPath = await BackupService.exportDatabase();
+      final fileId = await GoogleDriveService.uploadBackup(backupPath);
+
+      if (mounted) {
+        if (fileId != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ تم رفع النسخة الاحتياطية إلى جوجل درايف بنجاح'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('❌ فشل رفع الملف، تأكد من تسجيل الدخول'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.danger),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSyncing = false);
+    }
+  }
+
+  Future<void> _restoreFromDrive() async {
+    setState(() => _isSyncing = true);
+    try {
+      final files = await GoogleDriveService.listBackups();
+
+      if (files.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('لا توجد نسخ احتياطية على جوجل درايف')),
+          );
+        }
+        setState(() => _isSyncing = false);
+        return;
+      }
+
+      final selectedFile = await showDialog<drive.File>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('اختر نسخة احتياطية'),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 300,
+            child: ListView.builder(
+              itemCount: files.length,
+              itemBuilder: (context, index) {
+                final file = files[index];
+                final name = file.name ?? 'بدون اسم';
+                final modified = file.modifiedTime?.toLocal().toString() ?? 'تاريخ غير معروف';
+                return ListTile(
+                  title: Text(name),
+                  subtitle: Text(modified),
+                  onTap: () => Navigator.pop(context, file),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, null),
+              child: const Text('إلغاء'),
+            ),
+          ],
+        ),
+      );
+
+      if (selectedFile == null || selectedFile.id == null) {
+        setState(() => _isSyncing = false);
+        return;
+      }
+
+      final downloadedPath = await GoogleDriveService.downloadBackup(selectedFile.id!);
+      if (downloadedPath != null && mounted) {
+        await BackupService.importDatabase(downloadedPath);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ تم استعادة البيانات من جوجل درايف بنجاح'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        await _loadBackupFiles();
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ فشل تحميل الملف'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.danger),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSyncing = false);
+    }
+  }
+
   void _logout() {
     Navigator.pushAndRemoveUntil(
       context,
@@ -118,11 +236,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         title: const Text('الإعدادات'),
       ),
-      body: _isLoading
+      body: (_isLoading || _isSyncing)
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               children: [
-                // قسم النسخ الاحتياطي
+                // ===== قسم النسخ الاحتياطي المحلي =====
                 Container(
                   padding: const EdgeInsets.all(16),
                   margin: const EdgeInsets.all(16),
@@ -135,7 +253,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'النسخ الاحتياطي',
+                        'النسخ الاحتياطي المحلي',
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 12),
@@ -177,7 +295,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
 
-                // قسم جوجل درايف
+                // ===== قسم المزامنة مع Google Drive (جديد) =====
                 Container(
                   padding: const EdgeInsets.all(16),
                   margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -190,20 +308,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'المزامنة',
+                        'المزامنة السحابية (Google Drive)',
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 12),
                       _buildMenuItem(
                         icon: Icons.cloud_upload,
-                        title: 'جوجل درايف',
-                        subtitle: 'مزامنة النسخ الاحتياطية مع جوجل درايف',
+                        title: 'رفع إلى جوجل درايف',
+                        subtitle: 'حفظ نسخة احتياطية في السحاب',
                         color: Colors.green,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('سيتم إضافة مزامنة جوجل درايف قريباً')),
-                          );
-                        },
+                        onTap: _uploadToDrive,
+                      ),
+                      const Divider(),
+                      _buildMenuItem(
+                        icon: Icons.cloud_download,
+                        title: 'استعادة من جوجل درايف',
+                        subtitle: 'استرجاع البيانات من السحاب',
+                        color: Colors.blue,
+                        onTap: _restoreFromDrive,
                       ),
                     ],
                   ),
@@ -211,7 +333,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 16),
 
-                // قسم التواصل
+                // ===== قسم التواصل والمعلومات =====
                 Container(
                   padding: const EdgeInsets.all(16),
                   margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -234,7 +356,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         subtitle: 'للإستفسارات والدعم الفني',
                         color: Colors.blue,
                         onTap: () {
-                          // TODO: فتح رابط التواصل
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const AboutScreen()),
+                          );
                         },
                       ),
                       const Divider(),
@@ -244,11 +369,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         subtitle: 'تطبيق محاسبة إصدار 1.0.0',
                         color: Colors.grey,
                         onTap: () {
-                          showAboutDialog(
-                            context: context,
-                            applicationName: 'تطبيق المحاسبة',
-                            applicationVersion: '1.0.0',
-                            applicationLegalese: '© 2024 جميع الحقوق محفوظة',
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const AboutScreen()),
                           );
                         },
                       ),
@@ -258,7 +381,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 16),
 
-                // زر الخروج
+                // ===== زر الخروج =====
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: ElevatedButton(
