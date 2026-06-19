@@ -3,10 +3,9 @@ plugins {
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
-
 android {
     namespace = "com.example.accounting_app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36 // <--- قم بتغيير هذا السطر فقط
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -33,7 +32,6 @@ android {
         }
     }
 }
-
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
