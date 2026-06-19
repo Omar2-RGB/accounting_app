@@ -33,7 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         setState(() => _backupFiles = files);
       }
     } catch (e) {
-      // تجاهل الأخطاء
+      // تجاهل ا��أخطاء
     }
   }
 
@@ -63,7 +63,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _restoreBackup() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+   final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['json'],
       );
