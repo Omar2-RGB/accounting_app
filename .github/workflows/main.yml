@@ -3,7 +3,7 @@ name: Build Flutter APK
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch: # هذا الخيار يضيف زراً لتشغيل البناء يدوياً متى شئت من الموقع
+  workflow_dispatch:
 
 jobs:
   build:
@@ -24,10 +24,10 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Install dependencies
-        run: flutter pub get
-
-      # ملاحظة: إذا كان مشروعك يحتوي على ملفات مخفية مثل .env يجب توليدها هنا قبل الـ Build
+      - name: Clean and Install dependencies
+        run: |
+          flutter clean
+          flutter pub get
 
       - name: Build APK
         run: flutter build apk --release
