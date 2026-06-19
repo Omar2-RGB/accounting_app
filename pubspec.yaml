@@ -35,9 +35,8 @@ dependencies:
   printing: ^5.15.0
   
   # اختيار الملفات والمشاركة (بمسافات صحيحة)
-  file_picker: ^11.0.2
-  share_plus: ^10.1.4
-  # خطوط جميلة
+  file_picker: 11.0.2  # or latest available
+  share_plus: ^7.2.0  # خطوط جميلة
   google_fonts: ^8.1.0
 
 dev_dependencies:
