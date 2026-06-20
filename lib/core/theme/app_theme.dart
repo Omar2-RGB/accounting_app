@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 class AppTheme {
@@ -9,21 +8,29 @@ class AppTheme {
       primaryColor: AppColors.primary,
       brightness: Brightness.dark,
       
-      // إعدادات الألوان العامة
       colorScheme: const ColorScheme.dark(
         primary: AppColors.primary,
         secondary: AppColors.accent,
         surface: AppColors.cardColor,
       ),
 
-      // إعدادات الخطوط لتعمل على كل التطبيق بخط كايرو
-      textTheme: GoogleFonts.cairoTextTheme(ThemeData.dark().textTheme).copyWith(
-        titleLarge: GoogleFonts.cairo(color: AppColors.textMain, fontWeight: FontWeight.bold),
-        bodyLarge: GoogleFonts.cairo(color: AppColors.textMain),
-        bodyMedium: GoogleFonts.cairo(color: AppColors.textMuted),
+      // استخدام TextStyle العادي بدلاً من GoogleFonts
+      textTheme: const TextTheme(
+        titleLarge: TextStyle(
+          color: AppColors.textMain,
+          fontWeight: FontWeight.bold,
+          fontSize: 20,
+        ),
+        bodyLarge: TextStyle(
+          color: AppColors.textMain,
+          fontSize: 16,
+        ),
+        bodyMedium: TextStyle(
+          color: AppColors.textMuted,
+          fontSize: 14,
+        ),
       ),
 
-      // شكل موحد للحقول (TextFormFields)
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.cardColor,
