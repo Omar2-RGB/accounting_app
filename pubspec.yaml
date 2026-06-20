@@ -25,12 +25,8 @@ dependencies:
   path: ^1.9.0
   pdf: ^3.13.0
   printing: ^5.15.0
-file_picker:
-  git:
-    url: https://github.com/miguelpruivo/flutter_file_picker.git
-    ref: patch-v2-embedding
+  file_picker: ^11.0.2
   share_plus: ^10.1.4
-  google_fonts: ^8.1.0
 
 dev_dependencies:
   flutter_test:
