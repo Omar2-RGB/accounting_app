@@ -25,7 +25,7 @@ dependencies:
   path: ^1.9.0
   pdf: ^3.13.0
   printing: ^5.15.0
-  file_picker: ^11.0.2
+  file_picker: ^8.1.4   # ✅ تم تغيير الإصدار إلى المستقر
   share_plus: ^10.1.4
   google_fonts: ^8.1.0
 
