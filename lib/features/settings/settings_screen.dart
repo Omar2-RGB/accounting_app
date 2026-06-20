@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
+// import 'package:file_picker/file_picker.dart';   // ← تم تعطيلها مؤقتاً
 import 'package:googleapis/drive/v3.dart' as drive;
 import '../../core/theme/app_colors.dart';
 import '../../services/backup_service.dart';
@@ -61,9 +61,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // ===== تم تعطيل دالة الاسترجاع مؤقتاً =====
+  /*
   Future<void> _restoreBackup() async {
     try {
-      // ✅ استخدم FilePicker.platform.pickFiles بشكل صحيح
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['json'],
@@ -88,6 +89,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+  */
+
+  // دالة فارغة بديلة (للتجنب الأخطاء في الـ UI)
+  Future<void> _restoreBackup() async {
+    // هذه الدالة معطلة حالياً لإنجاح البناء
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('ميزة استرجاع البيانات معطلة حالياً لحين إصلاحها'),
+          backgroundColor: Colors.orange,
+        ),
+      );
     }
   }
 
@@ -271,7 +286,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: 'استرجاع قاعدة البيانات',
                         subtitle: 'استعادة البيانات من ملف JSON',
                         color: Colors.orange,
-                        onTap: _restoreBackup,
+                        onTap: _restoreBackup,   // ← الدالة المعدلة
                       ),
                       if (_backupFiles.isNotEmpty) ...[
                         const Divider(),
