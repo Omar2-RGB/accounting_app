@@ -33,7 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         setState(() => _backupFiles = files);
       }
     } catch (e) {
-      // تجاهل ا��أخطاء
+      // تجاهل الأخطاء
     }
   }
 
@@ -63,14 +63,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _restoreBackup() async {
     try {
-   final result = await FilePicker.pickFiles(
+      // ✅ استخدم FilePicker.platform.pickFiles بشكل صحيح
+      final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['json'],
       );
       if (result == null) return;
 
       final filePath = result.files.single.path!;
-      setState(() => _isLoading = true);
+      if (mounted) setState(() => _isLoading = true);
 
       final message = await BackupService.importDatabase(filePath);
       if (mounted) {
@@ -295,7 +296,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
 
-                // ===== قسم المزامنة مع Google Drive (جديد) =====
+                // ===== قسم المزامنة مع Google Drive =====
                 Container(
                   padding: const EdgeInsets.all(16),
                   margin: const EdgeInsets.symmetric(horizontal: 16),
