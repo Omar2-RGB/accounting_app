@@ -20,9 +20,10 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
-// 🚀 فرمان الجيل التاسع (AGP 9.0+ Compliant Override)
-subprojects {
-    afterEvaluate {
+// 🚀 الفرمان الذهبي (The Global ProjectsEvaluated Master Hook)
+val rootProj = this
+gradle.projectsEvaluated {
+    rootProj.subprojects {
         extensions.findByType<com.android.build.api.dsl.LibraryExtension>()?.apply {
             compileSdk = 36
         }
