@@ -22,7 +22,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          flutter-version: '3.29.0' # 🚀 تم فك الأسر والترقية للنسخة الحديثة (تضم Dart 3.8)
+          # 🚀 السحر هنا: مسحنا سطر الإصدار! الآن سيسحب أحدث SDK مستقر في العالم دائماً
 
       - name: Clean and Install dependencies
         run: |
@@ -31,7 +31,6 @@ jobs:
 
       - name: Bulletproof compileSdk patch
         run: |
-          # إضافة (|| true) تمنع لينكس من إيقاف البناء في حال كان امتداد الملف غير موجود
           sed -i 's/compileSdk = 34/compileSdk = 36/g' android/app/build.gradle.kts || true
           sed -i 's/targetSdk = 34/targetSdk = 36/g' android/app/build.gradle.kts || true
           sed -i 's/compileSdk 34/compileSdk 36/g' android/app/build.gradle || true
