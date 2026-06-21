@@ -16,16 +16,6 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 
-// 🚀 الفخ العلوي (وضعناه "قبل" أمر التقييم الإجباري)
-subprojects {
-    afterEvaluate { subProj ->
-        subProj.extensions.findByType<com.android.build.api.dsl.LibraryExtension>()?.apply {
-            compileSdk = 36
-        }
-    }
-}
-
-// عندما ينفذ هذا السطر الآن، ستكون المكتبات قد حُجزت في الفخ أعلاه
 subprojects {
     project.evaluationDependsOn(":app")
 }

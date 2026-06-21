@@ -4,18 +4,18 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"   # ✅ تم التعديل لضمان التوافق مع بيئات البناء
+  sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
 
-  # المصادقة والتواصل
-  url_launcher: ^6.3.0
-  google_sign_in: ^6.2.1
+  # المصادقة والتواصل (تم تحديثها لأحدث إصدارات مستقرة)
+  url_launcher: ^6.3.1
+  google_sign_in: ^7.2.0
   http: ^1.2.0
-  extension_google_sign_in_as_googleapis_auth: ^2.0.10
-  googleapis: ^13.1.0
+  extension_google_sign_in_as_googleapis_auth: ^3.0.0
+  googleapis: ^16.0.0
 
   # دعم اللغة العربية
   flutter_localizations:
@@ -25,10 +25,10 @@ dependencies:
   # أساسيات
   cupertino_icons: ^1.0.8
 
-  # قاعدة البيانات (SQLite) مع دعم الويب وسطح المكتب
+  # قاعدة البيانات
   sqflite: ^2.4.3
-  sqflite_common_ffi: ^2.3.4
-  sqflite_common_ffi_web: ^0.4.5
+  sqflite_common_ffi: ^2.3.7
+  sqflite_common_ffi_web: ^1.1.2
   path_provider: ^2.1.6
   path: ^1.9.0
 
@@ -36,17 +36,15 @@ dependencies:
   pdf: ^3.13.0
   printing: ^5.15.0
 
-  # اختيار الملفات (للنسخ الاحتياطي)
-  file_picker: ^8.1.4   # ✅ إصدار مستقر ومتوافق
-
-  # مشاركة الملفات
-  share_plus: ^10.1.4
+  # 🚀 فك أسر الحزم المتمردة ونقلها لـ 2026
+  file_picker: ^11.0.2
+  share_plus: ^13.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  flutter_launcher_icons: ^0.14.3   # ✅ أيقونات التطبيق
+  flutter_launcher_icons: ^0.14.3
 
 flutter:
   uses-material-design: true
@@ -56,5 +54,5 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/icon/app_icon.png"
   adaptive_icon_background: "#1A73E8"
-  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"   # (اختياري)
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
   remove_alpha_ios: true
