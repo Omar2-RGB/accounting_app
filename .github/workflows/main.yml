@@ -22,13 +22,20 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: '3.24.0'   # ✅ تحديد إصدار Flutter ثابت
 
       - name: Clean and Install dependencies
         run: |
-          rm -rf android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
-          rm -rf android/.gradle
           flutter clean
           flutter pub get
+
+      - name: Ensure compileSdk is 36
+        run: |
+          # ✅ تأكد من أن compileSdk و targetSdk مضبوطان على 36
+          sed -i 's/compileSdk = 34/compileSdk = 36/g' android/app/build.gradle.kts
+          sed -i 's/targetSdk = 34/targetSdk = 36/g' android/app/build.gradle.kts
+          sed -i 's/compileSdk 34/compileSdk 36/g' android/app/build.gradle
+          sed -i 's/targetSdk 34/targetSdk 36/g' android/app/build.gradle
 
       - name: Build APK
         run: flutter build apk --release
