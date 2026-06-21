@@ -24,48 +24,64 @@ class _CurrencyListScreenState extends State<CurrencyListScreen> {
     try {
       final dbHelper = DatabaseHelper.instance;
       final currencies = await dbHelper.getAllCurrencies();
-      setState(() {
-        _currencies = currencies;
-        _isLoading = false;
-      });
+
+      // ✅ التحقق من mounted قبل setState
+      if (mounted) {
+        setState(() {
+          _currencies = currencies;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e')),
-      );
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ: $e')),
+        );
+      }
     }
   }
 
   Future<void> _setDefaultCurrency(int id) async {
     try {
       final dbHelper = DatabaseHelper.instance;
-      // إزالة الافتراضي من جميع العملات
+
+      // 1. جلب جميع العملات
       final all = await dbHelper.getAllCurrencies();
+
+      // 2. إزالة الافتراضي من جميع العملات
       for (var c in all) {
         if (c['is_default'] == 1) {
-          await dbHelper.updateCurrency({
-            'id': c['id'],
-            'is_default': 0,
-            // ... الحقول الأخرى لا تتغير
-          });
+          // ✅ تمرير جميع الحقول مع تغيير is_default فقط
+          final updated = Map<String, dynamic>.from(c);
+          updated['is_default'] = 0;
+          await dbHelper.updateCurrency(updated);
         }
       }
-      // تعيين العملة الجديدة كافتراضية
+
+      // 3. تعيين العملة الجديدة كافتراضية
       final currency = await dbHelper.getCurrencyById(id);
       if (currency != null) {
-        await dbHelper.updateCurrency({
-          ...currency,
-          'is_default': 1,
-        });
+        final updated = Map<String, dynamic>.from(currency);
+        updated['is_default'] = 1;
+        await dbHelper.updateCurrency(updated);
       }
-      _loadCurrencies();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم تعيين العملة الأساسية')),
-      );
+
+      // 4. إعادة تحميل القائمة
+      await _loadCurrencies();
+
+      // ✅ التحقق من mounted قبل عرض الـ SnackBar
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم تعيين العملة الأساسية')),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ: $e')),
+        );
+      }
     }
   }
 
@@ -136,7 +152,10 @@ class _CurrencyListScreenState extends State<CurrencyListScreen> {
                             IconButton(
                               icon: const Icon(Icons.edit, color: Colors.blue),
                               onPressed: () {
-                                // TODO: فتح شاشة تعديل
+                                // TODO: فتح شاشة تعديل العملة
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('سيتم إضافة تعديل العملات قريباً')),
+                                );
                               },
                             ),
                           ],
@@ -150,7 +169,9 @@ class _CurrencyListScreenState extends State<CurrencyListScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const AddCurrencyScreen()),
-          ).then((_) => _loadCurrencies());
+          ).then((_) {
+            _loadCurrencies();
+          });
         },
         child: const Icon(Icons.add),
       ),

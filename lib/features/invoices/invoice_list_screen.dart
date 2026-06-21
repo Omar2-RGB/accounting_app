@@ -22,10 +22,13 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   }
 
   Future<void> _loadInvoices() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    // ✅ التحقق من mounted قبل setState
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final dbHelper = DatabaseHelper.instance;
@@ -35,21 +38,24 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       for (var invoice in invoices) {
         final contact = await dbHelper.getContact(invoice['contact_id']);
         invoice['contact_name'] = contact?['name'] ?? 'غير معروف';
-
-        // ✅ جلب رمز العملة للفاتورة
         final currencySymbol = await dbHelper.getCurrencySymbolForInvoice(invoice['id']);
         invoice['currency_symbol'] = currencySymbol;
       }
 
-      setState(() {
-        _invoices = invoices;
-        _isLoading = false;
-      });
+      // ✅ التحقق من mounted بعد await
+      if (mounted) {
+        setState(() {
+          _invoices = invoices;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'حدث خطأ أثناء تحميل الفواتير: $e';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'حدث خطأ أثناء تحميل الفواتير: $e';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -57,12 +63,15 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     try {
       await PdfService.generateAndPrintInvoice(invoiceId);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('فشل تصدير الفاتورة: $e'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+      // ✅ التحقق من mounted قبل عرض الـ SnackBar
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('فشل تصدير الفاتورة: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
     }
   }
 
@@ -122,10 +131,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                         final grandTotal = invoice['grand_total'] as double? ?? 0.0;
                         final status = invoice['status'] ?? 'unpaid';
                         final date = invoice['date'] ?? '';
-                        // ✅ جلب رمز العملة من البيانات المحملة
                         final currencySymbol = invoice['currency_symbol'] ?? 'د.أ';
 
-                        // تحديد لون الحالة
                         Color statusColor;
                         String statusText;
                         switch (status) {
@@ -154,7 +161,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                           margin: const EdgeInsets.only(bottom: 12),
                           child: ListTile(
                             leading: CircleAvatar(
-                              backgroundColor: statusColor.withOpacity(0.1),
+                              // ✅ استخدام withValues بدلاً من withOpacity
+                              backgroundColor: statusColor.withValues(alpha: 0.1),
                               child: Icon(
                                 status == 'paid'
                                     ? Icons.check_circle
@@ -185,7 +193,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      '${grandTotal.toStringAsFixed(2)} $currencySymbol', // ✅ رمز العملة ديناميكي
+                                      '${grandTotal.toStringAsFixed(2)} $currencySymbol',
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -196,7 +204,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                         vertical: 2,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: statusColor.withOpacity(0.2),
+                                        // ✅ استخدام withValues بدلاً من withOpacity
+                                        color: statusColor.withValues(alpha: 0.2),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Text(

@@ -13,6 +13,7 @@ class _CategoryReportState extends State<CategoryReport> {
   List<Map<String, dynamic>> _categories = [];
   bool _isLoading = true;
   String? _errorMessage;
+  String _currencySymbol = 'د.أ';
 
   @override
   void initState() {
@@ -21,10 +22,12 @@ class _CategoryReportState extends State<CategoryReport> {
   }
 
   Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final dbHelper = DatabaseHelper.instance;
@@ -51,18 +54,23 @@ class _CategoryReportState extends State<CategoryReport> {
         }
       }
 
-      setState(() {
-        _categories = [
-          {'name': 'العملاء', 'total': customerTotal, 'symbol': symbol},
-          {'name': 'الموردين', 'total': supplierTotal, 'symbol': symbol},
-        ];
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _categories = [
+            {'name': 'العملاء', 'total': customerTotal, 'symbol': symbol},
+            {'name': 'الموردين', 'total': supplierTotal, 'symbol': symbol},
+          ];
+          _currencySymbol = symbol;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'خطأ: $e';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'خطأ: $e';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -81,7 +89,21 @@ class _CategoryReportState extends State<CategoryReport> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null
-              ? Center(child: Text(_errorMessage!))
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline, size: 60, color: AppColors.danger),
+                      const SizedBox(height: 16),
+                      Text(_errorMessage!, style: const TextStyle(color: AppColors.danger)),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _loadData,
+                        child: const Text('إعادة المحاولة'),
+                      ),
+                    ],
+                  ),
+                )
               : _categories.isEmpty
                   ? const Center(child: Text('لا توجد بيانات'))
                   : Padding(
@@ -112,6 +134,34 @@ class _CategoryReportState extends State<CategoryReport> {
                             );
                           }),
                           const Divider(),
+                          // ✅ إجمالي الكل
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'الإجمالي الكلي:',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                Text(
+                                  '${_categories.fold(0.0, (sum, item) => sum + (item['total'] as double? ?? 0.0)).toStringAsFixed(2)} $_currencySymbol',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),

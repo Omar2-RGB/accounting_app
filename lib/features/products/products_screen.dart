@@ -13,29 +13,82 @@ class _ProductsScreenState extends State<ProductsScreen> {
   List<Map<String, dynamic>> _products = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  String _currencySymbol = 'د.أ';
 
   @override
   void initState() {
     super.initState();
     _loadProducts();
+    _loadCurrencySymbol();
+  }
+
+  Future<void> _loadCurrencySymbol() async {
+    try {
+      final dbHelper = DatabaseHelper.instance;
+      final defaultCurrency = await dbHelper.getDefaultCurrency();
+      if (mounted && defaultCurrency != null) {
+        setState(() {
+          _currencySymbol = defaultCurrency['symbol'] ?? 'د.أ';
+        });
+      }
+    } catch (e) {
+      // تجاهل الخطأ، استخدم القيمة الافتراضية
+    }
   }
 
   Future<void> _loadProducts() async {
-    setState(() => _isLoading = true);
+    if (mounted) setState(() => _isLoading = true);
+
     try {
       final dbHelper = DatabaseHelper.instance;
       final products = _searchQuery.isEmpty
           ? await dbHelper.getAllProducts()
           : await dbHelper.searchProducts(_searchQuery);
-      setState(() {
-        _products = products;
-        _isLoading = false;
-      });
+
+      if (mounted) {
+        setState(() {
+          _products = products;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e')),
-      );
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _addStock(int productId, double quantity) async {
+    try {
+      final dbHelper = DatabaseHelper.instance;
+      await dbHelper.addInventoryTransaction({
+        'product_id': productId,
+        'quantity': quantity,
+        'type': 'in',
+        'note': 'إضافة مخزون',
+        'date': DateTime.now().toIso8601String(),
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      await _loadProducts();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم إضافة المخزون'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.danger),
+        );
+      }
     }
   }
 
@@ -62,15 +115,64 @@ class _ProductsScreenState extends State<ProductsScreen> {
     try {
       final dbHelper = DatabaseHelper.instance;
       await dbHelper.deleteProduct(id);
-      _loadProducts();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم حذف المنتج'), backgroundColor: AppColors.success),
-      );
+      await _loadProducts();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم حذف المنتج'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.danger),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.danger),
+        );
+      }
     }
+  }
+
+  void _showAddStockDialog(int productId) {
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('إضافة مخزون'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(labelText: 'الكمية المضافة'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              controller.dispose();
+              Navigator.pop(context);
+            },
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final qty = double.tryParse(controller.text.trim());
+              controller.dispose();
+              if (qty != null && qty > 0) {
+                Navigator.pop(context);
+                _addStock(productId, qty);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('أدخل كمية صحيحة')),
+                );
+              }
+            },
+            child: const Text('إضافة'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -87,7 +189,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
       ),
       body: Column(
         children: [
-          // شريط البحث
+          // ✅ شريط البحث
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
@@ -113,7 +215,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               },
             ),
           ),
-          // قائمة المنتجات
+          // ✅ قائمة المنتجات
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -135,7 +237,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             margin: const EdgeInsets.only(bottom: 8),
                             child: ListTile(
                               leading: CircleAvatar(
-                                backgroundColor: AppColors.primary.withOpacity(0.1),
+                                backgroundColor: AppColors.primary.withValues(alpha: 0.1), // ✅ withValues
                                 child: Icon(Icons.inventory_2, color: AppColors.primary),
                               ),
                               title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -143,8 +245,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   if (category.isNotEmpty) Text('التصنيف: $category'),
-                                  Text('السعر: $price د.أ | الكمية: $quantity'),
-                                  if (sku.isNotEmpty) Text('SKU: $sku', style: const TextStyle(fontSize: 10)),
+                                  Text('السعر: $price $_currencySymbol | الكمية: $quantity'),
+                                  if (sku.isNotEmpty)
+                                    Text('SKU: $sku', style: const TextStyle(fontSize: 10)),
                                 ],
                               ),
                               trailing: Row(
@@ -152,15 +255,18 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 children: [
                                   IconButton(
                                     icon: const Icon(Icons.add_box, color: Colors.blue),
-                                    onPressed: () {
-                                      // TODO: إضافة مخزون
-                                    },
+                                    onPressed: () => _showAddStockDialog(id),
                                     tooltip: 'إضافة مخزون',
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.edit, color: Colors.orange),
                                     onPressed: () {
-                                      // TODO: شاشة تعديل
+                                      // TODO: شاشة تعديل المنتج
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('سيتم إضافة تعديل المنتجات قريباً'),
+                                        ),
+                                      );
                                     },
                                   ),
                                   IconButton(
@@ -179,6 +285,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // TODO: فتح شاشة إضافة منتج
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('سيتم إضافة منتج جديد قريباً'),
+            ),
+          );
         },
         child: const Icon(Icons.add),
       ),

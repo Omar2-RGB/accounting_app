@@ -12,27 +12,49 @@ class InventoryScreen extends StatefulWidget {
 class _InventoryScreenState extends State<InventoryScreen> {
   List<Map<String, dynamic>> _products = [];
   bool _isLoading = true;
+  String _currencySymbol = 'د.أ';
 
   @override
   void initState() {
     super.initState();
     _loadInventory();
+    _loadCurrencySymbol();
+  }
+
+  Future<void> _loadCurrencySymbol() async {
+    try {
+      final dbHelper = DatabaseHelper.instance;
+      final defaultCurrency = await dbHelper.getDefaultCurrency();
+      if (mounted && defaultCurrency != null) {
+        setState(() {
+          _currencySymbol = defaultCurrency['symbol'] ?? 'د.أ';
+        });
+      }
+    } catch (e) {
+      // تجاهل الخطأ، استخدم القيمة الافتراضية
+    }
   }
 
   Future<void> _loadInventory() async {
-    setState(() => _isLoading = true);
+    if (mounted) setState(() => _isLoading = true);
+
     try {
       final dbHelper = DatabaseHelper.instance;
       final products = await dbHelper.getAllProducts();
-      setState(() {
-        _products = products;
-        _isLoading = false;
-      });
+
+      if (mounted) {
+        setState(() {
+          _products = products;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e')),
-      );
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ: $e')),
+        );
+      }
     }
   }
 
@@ -47,14 +69,23 @@ class _InventoryScreenState extends State<InventoryScreen> {
         'date': DateTime.now().toIso8601String(),
         'created_at': DateTime.now().toIso8601String(),
       });
-      _loadInventory();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم إضافة المخزون'), backgroundColor: AppColors.success),
-      );
+
+      await _loadInventory();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم إضافة المخزون'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.danger),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.danger),
+        );
+      }
     }
   }
 
@@ -91,7 +122,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         child: Row(
                           children: [
                             CircleAvatar(
-                              backgroundColor: quantity > 0 ? AppColors.success : AppColors.danger,
+                              backgroundColor:
+                                  quantity > 0 ? AppColors.success : AppColors.danger,
                               child: Text(
                                 quantity > 0 ? (quantity > 10 ? '✓' : '!') : '✗',
                                 style: const TextStyle(color: Colors.white),
@@ -103,7 +135,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  Text('السعر: $price د.أ'),
+                                  Text('السعر: $price $_currencySymbol'),
                                 ],
                               ),
                             ),
@@ -139,6 +171,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   void _showAddStockDialog(BuildContext context, int productId) {
     final controller = TextEditingController();
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -147,15 +180,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
           controller: controller,
           keyboardType: TextInputType.numberWithOptions(decimal: true),
           decoration: const InputDecoration(labelText: 'الكمية المضافة'),
+          autofocus: true,
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              controller.dispose();
+              Navigator.pop(context);
+            },
             child: const Text('إلغاء'),
           ),
           ElevatedButton(
             onPressed: () {
               final qty = double.tryParse(controller.text.trim());
+              controller.dispose();
               if (qty != null && qty > 0) {
                 Navigator.pop(context);
                 _addStock(productId, qty);

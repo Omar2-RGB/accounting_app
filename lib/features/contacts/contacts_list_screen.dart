@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/local_database/database_helper.dart';
-import '../../features/reports/account_statement_screen.dart';
+import '../reports/account_statement_screen.dart'; // ✅ مسار صحيح
 
 class ContactsListScreen extends StatefulWidget {
   const ContactsListScreen({super.key});
@@ -22,49 +22,61 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
   }
 
   Future<void> _loadContacts() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    // ✅ التحقق من mounted قبل setState
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
-      // استخدام الدالة الجاهزة من DatabaseHelper
       final dbHelper = DatabaseHelper.instance;
       final data = await dbHelper.getAllContacts();
-      setState(() {
-        _contacts = data;
-        _isLoading = false;
-      });
+
+      // ✅ التحقق من mounted بعد await
+      if (mounted) {
+        setState(() {
+          _contacts = data;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'حدث خطأ أثناء تحميل البيانات: $e';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'حدث خطأ أثناء تحميل البيانات: $e';
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  // دالة لحذف جهة اتصال مع تحديث القائمة
   Future<void> _deleteContact(int id) async {
     try {
       final dbHelper = DatabaseHelper.instance;
       await dbHelper.deleteContact(id);
-      // إزالة الجهة من القائمة المحلية
-      setState(() {
-        _contacts.removeWhere((contact) => contact['id'] == id);
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تم حذف الجهة بنجاح'),
-          backgroundColor: AppColors.success,
-        ),
-      );
+
+      // ✅ التحقق من mounted قبل setState
+      if (mounted) {
+        setState(() {
+          _contacts.removeWhere((contact) => contact['id'] == id);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم حذف الجهة بنجاح'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('فشل الحذف: $e'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('فشل الحذف: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
     }
   }
 
@@ -149,25 +161,40 @@ class _ContactsListScreenState extends State<ContactsListScreen> {
                                 }
                               },
                               itemBuilder: (context) => [
-                                const PopupMenuItem(value: 'edit', child: Row(
-                                  children: [Icon(Icons.edit), SizedBox(width: 8), Text('تعديل')],
-                                )),
-                                const PopupMenuItem(value: 'delete', child: Row(
-                                  children: [Icon(Icons.delete, color: AppColors.danger), SizedBox(width: 8), Text('حذف', style: TextStyle(color: AppColors.danger))],
-                                )),
+                                const PopupMenuItem(
+                                  value: 'edit',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.edit),
+                                      SizedBox(width: 8),
+                                      Text('تعديل'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete, color: AppColors.danger),
+                                      SizedBox(width: 8),
+                                      Text('حذف', style: TextStyle(color: AppColors.danger)),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
-                          onTap: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => AccountStatementScreen(
-        contactId: contact['id'],
-        contactName: contact['name'],
-      ),
-    ),
-  );
-},
+                            onTap: () {
+                              // ✅ الانتقال إلى كشف الحساب مع تمرير البيانات
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AccountStatementScreen(
+                                    contactId: contact['id'],
+                                    contactName: contact['name'],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         );
                       },

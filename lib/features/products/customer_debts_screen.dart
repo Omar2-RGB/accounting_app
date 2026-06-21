@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/local_database/database_helper.dart';
-import '../payments/add_amount_screen.dart'; // تأكد من صحة المسار
+import '../payments/add_amount_screen.dart';
 
 class CustomerDebtsScreen extends StatefulWidget {
   const CustomerDebtsScreen({super.key});
@@ -16,6 +16,7 @@ class _CustomerDebtsScreenState extends State<CustomerDebtsScreen> {
   bool _isLoading = true;
   String _searchQuery = '';
   double _totalDebts = 0.0;
+  String _currencySymbol = 'د.أ'; // default
 
   @override
   void initState() {
@@ -24,21 +25,31 @@ class _CustomerDebtsScreenState extends State<CustomerDebtsScreen> {
   }
 
   Future<void> _loadDebts() async {
-    setState(() => _isLoading = true);
+    if (mounted) setState(() => _isLoading = true);
     try {
       final dbHelper = DatabaseHelper.instance;
+      // Load debts and default currency
       final debts = await dbHelper.getCustomerDebts();
-      _totalDebts = debts.fold(0, (sum, d) => sum + (d['debt_amount'] as double? ?? 0.0));
-      setState(() {
-        _debts = debts;
-        _filteredDebts = debts;
-        _isLoading = false;
-      });
+      final defaultCurrency = await dbHelper.getDefaultCurrency();
+      final symbol = defaultCurrency?['symbol'] ?? 'د.أ';
+
+      final total = debts.fold(0.0, (sum, d) => sum + (d['debt_amount'] as double? ?? 0.0));
+      if (mounted) {
+        setState(() {
+          _debts = debts;
+          _filteredDebts = debts;
+          _totalDebts = total;
+          _currencySymbol = symbol;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e')),
-      );
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ: $e')),
+        );
+      }
     }
   }
 
@@ -70,13 +81,15 @@ class _CustomerDebtsScreenState extends State<CustomerDebtsScreen> {
       ),
       body: Column(
         children: [
-          // إجمالي الديون
           Container(
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.danger, AppColors.danger.withOpacity(0.6)],
+                colors: [
+                  AppColors.danger,
+                  AppColors.danger.withValues(alpha: 0.6), // ✅ replaced withValues
+                ],
               ),
               borderRadius: BorderRadius.circular(12),
             ),
@@ -88,7 +101,7 @@ class _CustomerDebtsScreenState extends State<CustomerDebtsScreen> {
                   style: TextStyle(color: Colors.white, fontSize: 16),
                 ),
                 Text(
-                  '${_totalDebts.toStringAsFixed(2)} د.أ',
+                  '${_totalDebts.toStringAsFixed(2)} $_currencySymbol',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 22,
@@ -98,7 +111,6 @@ class _CustomerDebtsScreenState extends State<CustomerDebtsScreen> {
               ],
             ),
           ),
-          // بحث
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(
@@ -122,7 +134,6 @@ class _CustomerDebtsScreenState extends State<CustomerDebtsScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          // القائمة
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -138,16 +149,16 @@ class _CustomerDebtsScreenState extends State<CustomerDebtsScreen> {
                           final amount = debt['debt_amount'] as double? ?? 0.0;
 
                           return Card(
-                            margin: const EdgeInsets.only(bottom: 8), // ✅ تم التصحيح هنا
+                            margin: const EdgeInsets.only(bottom: 8),
                             child: ListTile(
                               leading: CircleAvatar(
-                                backgroundColor: AppColors.primary.withOpacity(0.1),
+                                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                                 child: Icon(Icons.person, color: AppColors.primary),
                               ),
                               title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
                               subtitle: phone.isNotEmpty ? Text(phone) : null,
                               trailing: Text(
-                                '${amount.toStringAsFixed(2)} د.أ',
+                                '${amount.toStringAsFixed(2)} $_currencySymbol',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: amount > 0 ? AppColors.danger : AppColors.success,
@@ -164,7 +175,6 @@ class _CustomerDebtsScreenState extends State<CustomerDebtsScreen> {
           ),
         ],
       ),
-      // ✅ زر عائم لإضافة دين جديد
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(

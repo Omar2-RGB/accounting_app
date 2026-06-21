@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+// import 'package:flutter/foundation.dart' show kIsWeb; // ❌ غير مستخدم، احذفه
 import '../../core/theme/app_colors.dart';
 import '../../data/local_database/database_helper.dart';
 
@@ -19,16 +19,15 @@ class _AddContactScreenState extends State<AddContactScreen> {
   Future<void> _saveContact() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // تجهيز بيانات الجهة
+    // ✅ تجهيز بيانات الجهة (مع التصحيح)
     final Map<String, dynamic> contactData = {
       'name': _nameController.text.trim(),
       'phone': _phoneController.text.trim(),
       'type': _type,
-      'createdAt': DateTime.now().toIso8601String(),
+      'created_at': DateTime.now().toIso8601String(), // ✅ صح (بحرف underscore)
     };
 
     try {
-      // استخدام دالة addContact من DatabaseHelper
       final dbHelper = DatabaseHelper.instance;
       final id = await dbHelper.addContact(contactData);
 

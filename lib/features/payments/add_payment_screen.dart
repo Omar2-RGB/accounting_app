@@ -44,17 +44,24 @@ class _AddPaymentScreenState extends State<AddPaymentScreen> {
     try {
       final dbHelper = DatabaseHelper.instance;
       final contacts = await dbHelper.getAllContacts();
-      setState(() => _contacts = contacts);
+      // ✅ التحقق من mounted قبل setState
+      if (mounted) {
+        setState(() => _contacts = contacts);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في تحميل الجهات: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل الجهات: $e')),
+        );
+      }
     }
   }
 
   // تحميل الفواتير غير المدفوعة لجهة معينة
   Future<void> _loadInvoices(int contactId) async {
-    setState(() => _isLoadingInvoices = true);
+    // ✅ التحقق من mounted قبل setState
+    if (mounted) setState(() => _isLoadingInvoices = true);
+    
     try {
       final dbHelper = DatabaseHelper.instance;
       final invoices = await dbHelper.getUnpaidInvoicesByContact(contactId);
@@ -63,23 +70,29 @@ class _AddPaymentScreenState extends State<AddPaymentScreen> {
       if (invoices.isNotEmpty) {
         final firstInvoice = invoices.first;
         final invoiceType = firstInvoice['type'];
-        setState(() {
-          _paymentType = invoiceType == 'sale' ? 'receive' : 'pay';
-        });
+        if (mounted) {
+          setState(() {
+            _paymentType = invoiceType == 'sale' ? 'receive' : 'pay';
+          });
+        }
       }
       
-      setState(() {
-        _invoices = invoices;
-        _selectedInvoiceId = null;
-        _amount = 0.0;
-        _maxAmount = 0.0;
-        _isLoadingInvoices = false;
-      });
+      if (mounted) {
+        setState(() {
+          _invoices = invoices;
+          _selectedInvoiceId = null;
+          _amount = 0.0;
+          _maxAmount = 0.0;
+          _isLoadingInvoices = false;
+        });
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في تحميل الفواتير: $e')),
-      );
-      setState(() => _isLoadingInvoices = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل الفواتير: $e')),
+        );
+        setState(() => _isLoadingInvoices = false);
+      }
     }
   }
 
@@ -93,13 +106,6 @@ class _AddPaymentScreenState extends State<AddPaymentScreen> {
       });
       return;
     }
-
-    final invoice = _invoices.firstWhere((inv) => inv['id'] == invoiceId);
-    final grandTotal = invoice['grand_total'] as double;
-    
-    // حساب المبلغ المدفوع سابقاً (في حال كانت مدفوعة جزئياً)
-    // نأخذه من قاعدة البيانات مباشرة إذا أردنا الدقة، ولكننا نعتمد على القيمة الموجودة
-    // سنحسب الرصيد المتبقي
     _updateMaxAmount(invoiceId);
   }
 
@@ -112,15 +118,19 @@ class _AddPaymentScreenState extends State<AddPaymentScreen> {
       final grandTotal = invoice['grand_total'] as double;
       final remaining = grandTotal - paidAmount;
       
-      setState(() {
-        _selectedInvoiceId = invoiceId;
-        _maxAmount = remaining;
-        _amount = remaining; // نضع المبلغ الافتراضي = الرصيد المتبقي
-      });
+      if (mounted) {
+        setState(() {
+          _selectedInvoiceId = invoiceId;
+          _maxAmount = remaining;
+          _amount = remaining; // نضع المبلغ الافتراضي = الرصيد المتبقي
+        });
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في حساب الرصيد: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في حساب الرصيد: $e')),
+        );
+      }
     }
   }
 
@@ -141,29 +151,30 @@ class _AddPaymentScreenState extends State<AddPaymentScreen> {
       
       final Map<String, dynamic> paymentData = {
         'contact_id': _selectedContactId,
-        'invoice_id': _selectedInvoiceId, // يمكن أن تكون null (سند عام)
+        'invoice_id': _selectedInvoiceId,
         'amount': _amount,
         'date': _selectedDate.toIso8601String(),
         'type': _paymentType,
         'note': _note.trim(),
       };
 
-      final paymentId = await dbHelper.addPaymentWithStatusUpdate(paymentData);
+      await dbHelper.addPaymentWithStatusUpdate(paymentData);
 
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('تم تسجيل ${_paymentType == 'receive' ? 'سند قبض' : 'سند دفع'} بنجاح 🎉'),
-          backgroundColor: AppColors.success,
-        ),
-      );
-
-      Navigator.pop(context, true); // إرجاع true لتحديث الصفحة السابقة
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم تسجيل ${_paymentType == 'receive' ? 'سند قبض' : 'سند دفع'} بنجاح 🎉'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        Navigator.pop(context, true);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ أثناء الحفظ: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ أثناء الحفظ: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -175,7 +186,6 @@ class _AddPaymentScreenState extends State<AddPaymentScreen> {
       appBar: AppBar(
         title: Text(_paymentType == 'receive' ? 'سند قبض جديد' : 'سند دفع جديد'),
         actions: [
-          // زر تبديل نوع الدفع (يدوياً)
           DropdownButton<String>(
             value: _paymentType,
             items: const [
@@ -240,10 +250,11 @@ class _AddPaymentScreenState extends State<AddPaymentScreen> {
                               ),
                               ..._invoices.map((invoice) {
                                 final invoiceType = invoice['type'] == 'sale' ? 'بيع' : 'شراء';
+                                final currencySymbol = invoice['currency_symbol'] ?? 'د.أ';
                                 return DropdownMenuItem<int>(
                                   value: invoice['id'],
                                   child: Text(
-                                    'فاتورة ${invoice['invoice_number']} ($invoiceType) - ${invoice['grand_total']} د.أ',
+                                    'فاتورة ${invoice['invoice_number']} ($invoiceType) - ${invoice['grand_total']} $currencySymbol',
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 );
@@ -294,7 +305,7 @@ class _AddPaymentScreenState extends State<AddPaymentScreen> {
                           firstDate: DateTime(2020),
                           lastDate: DateTime.now(),
                         );
-                        if (date != null) {
+                        if (date != null && mounted) {
                           setState(() => _selectedDate = date);
                         }
                       },

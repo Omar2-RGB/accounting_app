@@ -18,6 +18,7 @@ import '../products/expenses_screen.dart';
 import '../products/inventory_screen.dart';
 import '../auth/login_screen.dart';
 import '../products/add_debt_screen.dart';
+
 class DashboardScreen extends StatefulWidget {
   final String userName;
   const DashboardScreen({super.key, required this.userName});
@@ -42,7 +43,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     };
   }
 
-  // دالة للخروج
   void _logout() {
     Navigator.pushAndRemoveUntil(
       context,
@@ -74,14 +74,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      // ✅ القائمة الجانبية (Drawer)
       drawer: Drawer(
         child: Container(
           color: AppColors.cardColor,
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
-              // Header
               DrawerHeader(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -113,11 +111,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
               ),
-_buildDrawerItem(
-  icon: Icons.money_off,
-  title: 'تسجيل دين',
-  onTap: () => _navigateTo(context, const AddDebtScreen()),
-),
+              // ✅ تسجيل دين (إضافة سريعة)
+              _buildDrawerItem(
+                icon: Icons.money_off,
+                title: 'تسجيل دين',
+                onTap: () => _navigateTo(context, const AddDebtScreen()),
+              ),
               // === قسم المحاسبة ===
               _buildDrawerGroup(
                 title: 'المحاسبة',
@@ -150,7 +149,6 @@ _buildDrawerItem(
                   ),
                 ],
               ),
-
               // === قسم التقارير ===
               _buildDrawerGroup(
                 title: 'التقارير',
@@ -173,7 +171,6 @@ _buildDrawerItem(
                   ),
                 ],
               ),
-
               // === قسم الإدارة ===
               _buildDrawerGroup(
                 title: 'الإدارة',
@@ -201,8 +198,6 @@ _buildDrawerItem(
                   ),
                 ],
               ),
-
-              // === الإعدادات والخروج ===
               const Divider(),
               _buildDrawerItem(
                 icon: Icons.settings,
@@ -230,7 +225,6 @@ _buildDrawerItem(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // بطاقة الرصيد (نفسها)
               FutureBuilder<Map<String, dynamic>>(
                 future: _loadDashboardData(),
                 builder: (context, snapshot) {
@@ -359,9 +353,6 @@ _buildDrawerItem(
                 },
               ),
               const SizedBox(height: 32),
-
-              // تم إزالة جميع الأزرار السريعة ووضعها في القائمة الجانبية
-              // يمكنك إضافة بعض الاختصارات هنا إذا أردت (مثل زر عائم)
             ],
           ),
         ),
@@ -369,7 +360,6 @@ _buildDrawerItem(
     );
   }
 
-  // دوال مساعدة لبناء القائمة الجانبية
   Widget _buildDrawerGroup({
     required String title,
     required IconData icon,
@@ -411,7 +401,6 @@ _buildDrawerItem(
       leading: Icon(icon, color: color ?? AppColors.primary),
       title: Text(title, style: TextStyle(color: color)),
       onTap: () {
-        // إغلاق القائمة قبل الانتقال
         Navigator.pop(context);
         onTap();
       },

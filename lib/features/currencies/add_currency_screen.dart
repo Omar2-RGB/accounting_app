@@ -48,15 +48,19 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
 
       await dbHelper.addCurrency(data);
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم إضافة العملة بنجاح 🎉')),
-      );
-      Navigator.pop(context);
+      // ✅ التحقق من mounted قبل استخدام context
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم إضافة العملة بنجاح 🎉')),
+        );
+        Navigator.pop(context);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -148,7 +152,7 @@ class _AddCurrencyScreenState extends State<AddCurrencyScreen> {
                 onPressed: _isLoading ? null : _saveCurrency,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  minimumSize: Size(double.infinity, 50),
+                  minimumSize: const Size(double.infinity, 50), // ✅ تم إضافة const
                 ),
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)

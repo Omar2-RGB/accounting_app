@@ -13,15 +13,31 @@ class _DetailsReportState extends State<DetailsReport> {
   List<Map<String, dynamic>> _transactions = [];
   bool _isLoading = true;
   String? _errorMessage;
+  String _currencySymbol = 'د.أ';
 
   @override
   void initState() {
     super.initState();
+    _loadCurrencySymbol();
     _loadData();
   }
 
+  Future<void> _loadCurrencySymbol() async {
+    try {
+      final dbHelper = DatabaseHelper.instance;
+      final defaultCurrency = await dbHelper.getDefaultCurrency();
+      if (mounted && defaultCurrency != null) {
+        setState(() {
+          _currencySymbol = defaultCurrency['symbol'] ?? 'د.أ';
+        });
+      }
+    } catch (e) {
+      // تجاهل
+    }
+  }
+
   Future<void> _loadData() async {
-    setState(() {
+    if (mounted) setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
@@ -29,27 +45,29 @@ class _DetailsReportState extends State<DetailsReport> {
     try {
       final dbHelper = DatabaseHelper.instance;
       final invoices = await dbHelper.getAllInvoices();
-      final defaultCurrency = await dbHelper.getDefaultCurrency();
-      final symbol = defaultCurrency?['symbol'] ?? 'د.أ';
 
       for (var inv in invoices) {
         final contact = await dbHelper.getContact(inv['contact_id']);
         inv['contact_name'] = contact?['name'] ?? 'غير معروف';
-        inv['currency_symbol'] = symbol;
+        inv['currency_symbol'] = _currencySymbol;
         inv['amount_in_base'] = (inv['grand_total'] as double) * (inv['currency_rate'] as double);
       }
 
       invoices.sort((a, b) => b['date'].compareTo(a['date']));
 
-      setState(() {
-        _transactions = invoices;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _transactions = invoices;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'خطأ: $e';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'خطأ: $e';
+          _isLoading = false;
+        });
+      }
     }
   }
 

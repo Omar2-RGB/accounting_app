@@ -17,9 +17,9 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
   int? _selectedContactId;
   String _invoiceType = 'sale'; // 'sale' أو 'purchase'
   final List<Map<String, dynamic>> _items = [];
-  double _taxRate = 16.0; // نسبة الضريبة المئوية
+  double _taxRate = 16.0;
 
-  // ===== متغيرات العملات =====
+  // متغيرات العملات
   List<Map<String, dynamic>> _currencies = [];
   int? _selectedCurrencyId;
   double _currencyRate = 1.0;
@@ -40,45 +40,52 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     _loadCurrencies();
   }
 
-  // تحميل قائمة الجهات من قاعدة البيانات
+  // تحميل قائمة الجهات
   Future<void> _loadContacts() async {
     try {
       final dbHelper = DatabaseHelper.instance;
       final contacts = await dbHelper.getAllContacts();
-      setState(() => _contacts = contacts);
+      if (mounted) {
+        setState(() => _contacts = contacts);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في تحميل الجهات: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل الجهات: $e')),
+        );
+      }
     }
   }
 
-  // ===== تحميل العملات من قاعدة البيانات =====
+  // تحميل العملات
   Future<void> _loadCurrencies() async {
     try {
       final dbHelper = DatabaseHelper.instance;
       final currencies = await dbHelper.getAllCurrencies();
-      setState(() {
-        _currencies = currencies;
-        // اختيار العملة الافتراضية
-        if (currencies.isNotEmpty) {
-          final defaultCurr = currencies.firstWhere(
-            (c) => c['is_default'] == 1,
-            orElse: () => currencies.first,
-          );
-          _selectedCurrencyId = defaultCurr['id'];
-          _currencyRate = defaultCurr['exchange_rate'] as double? ?? 1.0;
-          _currencySymbol = defaultCurr['symbol'] ?? 'د.أ';
-        }
-      });
+      if (mounted) {
+        setState(() {
+          _currencies = currencies;
+          if (currencies.isNotEmpty) {
+            final defaultCurr = currencies.firstWhere(
+              (c) => c['is_default'] == 1,
+              orElse: () => currencies.first,
+            );
+            _selectedCurrencyId = defaultCurr['id'];
+            _currencyRate = defaultCurr['exchange_rate'] as double? ?? 1.0;
+            _currencySymbol = defaultCurr['symbol'] ?? 'د.أ';
+          }
+        });
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في تحميل العملات: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل العملات: $e')),
+        );
+      }
     }
   }
 
-  // إضافة بند جديد إلى الفاتورة
+  // إضافة بند
   void _addItem() {
     final desc = _itemDescController.text.trim();
     final qty = double.tryParse(_itemQtyController.text.trim());
@@ -98,34 +105,31 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
         'unit_price': price,
         'total': qty * price,
       });
-      // مسح الحقول
       _itemDescController.clear();
       _itemQtyController.clear();
       _itemPriceController.clear();
     });
   }
 
-  // حذف بند من الفاتورة
+  // حذف بند
   void _removeItem(int index) {
     setState(() => _items.removeAt(index));
   }
 
-  // حساب الإجمالي قبل الضريبة
+  // الحسابات
   double _getSubtotal() {
     return _items.fold(0, (sum, item) => sum + (item['total'] as double));
   }
 
-  // حساب قيمة الضريبة
   double _getTax() {
     return _getSubtotal() * (_taxRate / 100);
   }
 
-  // حساب الإجمالي النهائي
   double _getGrandTotal() {
     return _getSubtotal() + _getTax();
   }
 
-  // حفظ الفاتورة في قاعدة البيانات
+  // حفظ الفاتورة
   Future<void> _saveInvoice() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedContactId == null) {
@@ -151,11 +155,8 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
 
     try {
       final dbHelper = DatabaseHelper.instance;
-
-      // إنشاء رقم فاتورة فريد
       final invoiceNumber = 'INV-${DateTime.now().millisecondsSinceEpoch}';
 
-      // بيانات الفاتورة مع العملة
       final Map<String, dynamic> invoiceData = {
         'invoice_number': invoiceNumber,
         'contact_id': _selectedContactId,
@@ -164,17 +165,15 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
         'total': _getSubtotal(),
         'tax': _getTax(),
         'grand_total': _getGrandTotal(),
-        'currency_id': _selectedCurrencyId,      // ✅ العملة المختارة
-        'currency_rate': _currencyRate,          // ✅ سعر الصرف
+        'currency_id': _selectedCurrencyId,
+        'currency_rate': _currencyRate,
         'status': 'unpaid',
         'note': _noteController.text.trim(),
         'created_at': DateTime.now().toIso8601String(),
       };
 
-      // إدراج الفاتورة والحصول على ID
       final invoiceId = await dbHelper.addInvoice(invoiceData);
 
-      // إدراج بنود الفاتورة
       for (var item in _items) {
         await dbHelper.addInvoiceItem({
           'invoice_id': invoiceId,
@@ -185,21 +184,21 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
         });
       }
 
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('تم حفظ الفاتورة رقم $invoiceNumber بنجاح 🎉'),
-          backgroundColor: AppColors.success,
-        ),
-      );
-
-      // العودة إلى الصفحة السابقة
-      Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم حفظ الفاتورة رقم $invoiceNumber بنجاح 🎉'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        Navigator.pop(context);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ أثناء الحفظ: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ أثناء الحفظ: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -229,7 +228,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // نوع الفاتورة (بيع/شراء)
+                    // نوع الفاتورة + جهة الاتصال
                     Row(
                       children: [
                         Expanded(
@@ -262,7 +261,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // ===== اختيار العملة =====
+                    // اختيار العملة
                     DropdownButtonFormField<int>(
                       value: _selectedCurrencyId,
                       decoration: const InputDecoration(
@@ -287,7 +286,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // قسم إضافة البنود
+                    // البنود
                     const Text(
                       'البنود',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -372,7 +371,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // ملخص الفاتورة (مع رمز العملة)
+                    // ملخص الفاتورة
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -420,7 +419,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     );
   }
 
-  // ===== دالة عرض ملخص مع رمز العملة =====
+  // عرض صف الملخص مع رمز العملة
   Widget _buildSummaryRow(String label, double value, {bool isBold = false, Color? color}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -429,7 +428,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
         children: [
           Text(label, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
           Text(
-            '${value.toStringAsFixed(2)} $_currencySymbol', // ✅ استخدام رمز العملة المختارة
+            '${value.toStringAsFixed(2)} $_currencySymbol',
             style: TextStyle(
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
               color: color,

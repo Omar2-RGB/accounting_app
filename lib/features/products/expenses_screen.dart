@@ -15,47 +15,79 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   bool _isLoading = true;
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
   DateTime _endDate = DateTime.now();
+  String _currencySymbol = 'د.أ';
 
   @override
   void initState() {
     super.initState();
     _loadExpenses();
+    _loadCurrencySymbol();
+  }
+
+  Future<void> _loadCurrencySymbol() async {
+    try {
+      final dbHelper = DatabaseHelper.instance;
+      final defaultCurrency = await dbHelper.getDefaultCurrency();
+      if (mounted && defaultCurrency != null) {
+        setState(() {
+          _currencySymbol = defaultCurrency['symbol'] ?? 'د.أ';
+        });
+      }
+    } catch (e) {
+      // تجاهل الخطأ، استخدم القيمة الافتراضية
+    }
   }
 
   Future<void> _loadExpenses() async {
-    setState(() => _isLoading = true);
+    // ✅ التحقق من mounted قبل setState
+    if (mounted) setState(() => _isLoading = true);
+
     try {
       final dbHelper = DatabaseHelper.instance;
       final expenses = await dbHelper.getExpensesByDate(_startDate, _endDate);
-      setState(() {
-        _expenses = expenses;
-        _isLoading = false;
-      });
+
+      if (mounted) {
+        setState(() {
+          _expenses = expenses;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e')),
-      );
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ: $e')),
+        );
+      }
     }
   }
 
   Future<void> _addExpense() async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (context) => _AddExpenseDialog(),
+      builder: (context) => const _AddExpenseDialog(),
     );
+
     if (result != null) {
       try {
         final dbHelper = DatabaseHelper.instance;
         await dbHelper.addExpense(result);
-        _loadExpenses();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إضافة المصروف'), backgroundColor: AppColors.success),
-        );
+        await _loadExpenses();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تم إضافة المصروف'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.danger),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.danger),
+          );
+        }
       }
     }
   }
@@ -64,19 +96,27 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     try {
       final dbHelper = DatabaseHelper.instance;
       await dbHelper.deleteExpense(id);
-      _loadExpenses();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم حذف المصروف'), backgroundColor: AppColors.success),
-      );
+      await _loadExpenses();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم حذف المصروف'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.danger),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.danger),
+        );
+      }
     }
   }
 
   double _getTotal() {
-    return _expenses.fold(0, (sum, e) => sum + (e['amount'] as double? ?? 0.0));
+    return _expenses.fold(0.0, (sum, e) => sum + (e['amount'] as double? ?? 0.0));
   }
 
   @override
@@ -107,9 +147,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         firstDate: DateTime(2020),
                         lastDate: DateTime.now(),
                       );
-                      if (date != null) {
+                      if (date != null && mounted) {
                         setState(() => _startDate = date);
-                        _loadExpenses();
+                        await _loadExpenses();
                       }
                     },
                     child: InputDecorator(
@@ -131,9 +171,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         firstDate: DateTime(2020),
                         lastDate: DateTime.now(),
                       );
-                      if (date != null) {
+                      if (date != null && mounted) {
                         setState(() => _endDate = date);
-                        _loadExpenses();
+                        await _loadExpenses();
                       }
                     },
                     child: InputDecorator(
@@ -153,12 +193,12 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               ],
             ),
           ),
-          // الإجمالي
+          // ✅ إجمالي المصاريف (مع رمز العملة الديناميكي)
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1), // ✅ withValues
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -166,7 +206,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               children: [
                 const Text('إجمالي المصاريف:', style: TextStyle(fontWeight: FontWeight.bold)),
                 Text(
-                  '${_getTotal().toStringAsFixed(2)} د.أ',
+                  '${_getTotal().toStringAsFixed(2)} $_currencySymbol',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: AppColors.danger,
@@ -177,7 +217,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          // القائمة
+          // ✅ قائمة المصاريف
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -199,7 +239,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             margin: const EdgeInsets.only(bottom: 8),
                             child: ListTile(
                               leading: CircleAvatar(
-                                backgroundColor: AppColors.danger.withOpacity(0.1),
+                                backgroundColor: AppColors.danger.withValues(alpha: 0.1), // ✅ withValues
                                 child: Icon(Icons.money_off, color: AppColors.danger),
                               ),
                               title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -208,14 +248,15 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                 children: [
                                   Text('التصنيف: $category'),
                                   Text('التاريخ: $date'),
-                                  if (note.isNotEmpty) Text('ملاحظة: $note', style: const TextStyle(fontSize: 10)),
+                                  if (note.isNotEmpty)
+                                    Text('ملاحظة: $note', style: const TextStyle(fontSize: 10)),
                                 ],
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    '${amount.toStringAsFixed(2)} د.أ',
+                                    '${amount.toStringAsFixed(2)} $_currencySymbol',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.danger,
@@ -243,7 +284,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   }
 }
 
-// حوار إضافة مصروف
+// ==================== حوار إضافة مصروف ====================
 class _AddExpenseDialog extends StatefulWidget {
   const _AddExpenseDialog();
 
@@ -258,6 +299,15 @@ class _AddExpenseDialogState extends State<_AddExpenseDialog> {
   final _categoryController = TextEditingController();
   final _noteController = TextEditingController();
   DateTime _date = DateTime.now();
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _amountController.dispose();
+    _categoryController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -303,7 +353,9 @@ class _AddExpenseDialogState extends State<_AddExpenseDialog> {
                     firstDate: DateTime(2020),
                     lastDate: DateTime.now(),
                   );
-                  if (date != null) setState(() => _date = date);
+                  if (date != null && mounted) {
+                    setState(() => _date = date);
+                  }
                 },
               ),
               const SizedBox(height: 12),

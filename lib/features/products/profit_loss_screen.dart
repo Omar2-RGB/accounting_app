@@ -15,27 +15,49 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
   bool _isLoading = true;
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
   DateTime _endDate = DateTime.now();
+  String _currencySymbol = 'د.أ';
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _loadCurrencySymbol();
+  }
+
+  Future<void> _loadCurrencySymbol() async {
+    try {
+      final dbHelper = DatabaseHelper.instance;
+      final defaultCurrency = await dbHelper.getDefaultCurrency();
+      if (mounted && defaultCurrency != null) {
+        setState(() {
+          _currencySymbol = defaultCurrency['symbol'] ?? 'د.أ';
+        });
+      }
+    } catch (e) {
+      // تجاهل الخطأ، استخدم القيمة الافتراضية
+    }
   }
 
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+    if (mounted) setState(() => _isLoading = true);
+
     try {
       final dbHelper = DatabaseHelper.instance;
       final data = await dbHelper.getProfitLoss(_startDate, _endDate);
-      setState(() {
-        _data = data;
-        _isLoading = false;
-      });
+
+      if (mounted) {
+        setState(() {
+          _data = data;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e')),
-      );
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ: $e')),
+        );
+      }
     }
   }
 
@@ -58,7 +80,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
       ),
       body: Column(
         children: [
-          // فلتر التاريخ
+          // ✅ فلتر التاريخ
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -72,9 +94,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                         firstDate: DateTime(2020),
                         lastDate: DateTime.now(),
                       );
-                      if (date != null) {
+                      if (date != null && mounted) {
                         setState(() => _startDate = date);
-                        _loadData();
+                        await _loadData();
                       }
                     },
                     child: InputDecorator(
@@ -96,9 +118,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                         firstDate: DateTime(2020),
                         lastDate: DateTime.now(),
                       );
-                      if (date != null) {
+                      if (date != null && mounted) {
                         setState(() => _endDate = date);
-                        _loadData();
+                        await _loadData();
                       }
                     },
                     child: InputDecorator(
@@ -118,7 +140,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
               ],
             ),
           ),
-          // بطاقات الأرباح والخسائر
+          // ✅ بطاقات الأرباح والخسائر
           _isLoading
               ? const Center(child: CircularProgressIndicator())
               : Expanded(
@@ -152,9 +174,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1), // ✅ withValues بدلاً من withOpacity
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)), // ✅ withValues
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -167,7 +189,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
             ),
           ),
           Text(
-            '${value.toStringAsFixed(2)} د.أ',
+            '${value.toStringAsFixed(2)} $_currencySymbol', // ✅ رمز العملة الديناميكي
             style: TextStyle(
               fontSize: isProfit ? 24 : 18,
               fontWeight: isProfit ? FontWeight.bold : FontWeight.normal,

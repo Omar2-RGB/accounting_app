@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/local_database/database_helper.dart';
-import '../payments/add_payment_screen.dart'; // 👈 أضف هذا الاستيراد
+import '../payments/add_payment_screen.dart';
 
 class AccountStatementScreen extends StatefulWidget {
   final int? contactId;
@@ -21,10 +21,12 @@ class _AccountStatementScreenState extends State<AccountStatementScreen> {
   List<Map<String, dynamic>> _transactions = [];
   bool _isLoading = true;
   double _runningBalance = 0.0;
+  String _currencySymbol = 'د.أ';
 
   @override
   void initState() {
     super.initState();
+    _loadCurrencySymbol();
     if (widget.contactId != null) {
       _loadTransactions();
     } else {
@@ -32,10 +34,24 @@ class _AccountStatementScreenState extends State<AccountStatementScreen> {
     }
   }
 
+  Future<void> _loadCurrencySymbol() async {
+    try {
+      final dbHelper = DatabaseHelper.instance;
+      final defaultCurrency = await dbHelper.getDefaultCurrency();
+      if (mounted && defaultCurrency != null) {
+        setState(() {
+          _currencySymbol = defaultCurrency['symbol'] ?? 'د.أ';
+        });
+      }
+    } catch (e) {
+      // تجاهل الخطأ، استخدم القيمة الافتراضية
+    }
+  }
+
   Future<void> _loadTransactions() async {
     if (widget.contactId == null) return;
 
-    setState(() => _isLoading = true);
+    if (mounted) setState(() => _isLoading = true);
 
     try {
       final dbHelper = DatabaseHelper.instance;
@@ -95,20 +111,24 @@ class _AccountStatementScreenState extends State<AccountStatementScreen> {
 
       combined = reversed.reversed.toList();
 
-      setState(() {
-        _transactions = combined;
-        _isLoading = false;
-        if (_transactions.isNotEmpty) {
-          _runningBalance = _transactions.first['running_balance'] as double;
-        } else {
-          _runningBalance = 0.0;
-        }
-      });
+      if (mounted) {
+        setState(() {
+          _transactions = combined;
+          _isLoading = false;
+          if (_transactions.isNotEmpty) {
+            _runningBalance = _transactions.first['running_balance'] as double;
+          } else {
+            _runningBalance = 0.0;
+          }
+        });
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في تحميل البيانات: $e')),
-      );
-      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل البيانات: $e')),
+        );
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -124,7 +144,6 @@ class _AccountStatementScreenState extends State<AccountStatementScreen> {
             children: [
               Text('اختر جهة لعرض دفتر حساباتها'),
               SizedBox(height: 20),
-              // يمكن إضافة زر للذهاب إلى قائمة الجهات
             ],
           ),
         ),
@@ -135,7 +154,7 @@ class _AccountStatementScreenState extends State<AccountStatementScreen> {
       appBar: AppBar(
         title: Text('دفتر حسابات ${widget.contactName}'),
         actions: [
-          // ✅ زر إضافة سند قبض/دفع
+          // زر إضافة سند قبض/دفع
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
@@ -146,10 +165,14 @@ class _AccountStatementScreenState extends State<AccountStatementScreen> {
                     contactId: widget.contactId,
                   ),
                 ),
-              ).then((_) => _loadTransactions()); // تحديث بعد العودة
+              ).then((_) {
+                if (mounted) {
+                  _loadTransactions();
+                }
+              });
             },
           ),
-          // ✅ زر التحديث
+          // زر التحديث
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadTransactions,
@@ -160,14 +183,16 @@ class _AccountStatementScreenState extends State<AccountStatementScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // بطاقة الملخص
+                // ✅ بطاقة الملخص (مع رمز العملة)
                 Container(
                   padding: const EdgeInsets.all(16),
                   margin: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1), // ✅ withValues
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.3), // ✅ withValues
+                    ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -180,11 +205,13 @@ class _AccountStatementScreenState extends State<AccountStatementScreen> {
                             style: TextStyle(fontSize: 14, color: Colors.grey),
                           ),
                           Text(
-                            '${_runningBalance.toStringAsFixed(2)} د.أ',
+                            '${_runningBalance.toStringAsFixed(2)} $_currencySymbol',
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              color: _runningBalance >= 0 ? AppColors.success : AppColors.danger,
+                              color: _runningBalance >= 0
+                                  ? AppColors.success
+                                  : AppColors.danger,
                             ),
                           ),
                         ],
@@ -209,7 +236,7 @@ class _AccountStatementScreenState extends State<AccountStatementScreen> {
                   ),
                 ),
 
-                // قائمة الحركات
+                // ✅ قائمة الحركات (مع رمز العملة)
                 Expanded(
                   child: _transactions.isEmpty
                       ? const Center(child: Text('لا توجد حركات لهذه الجهة'))
@@ -248,17 +275,22 @@ class _AccountStatementScreenState extends State<AccountStatementScreen> {
                             Color iconColor;
                             if (isInvoice) {
                               icon = Icons.receipt_long;
-                              iconColor = transType == 'sale' ? AppColors.success : AppColors.danger;
+                              iconColor = transType == 'sale'
+                                  ? AppColors.success
+                                  : AppColors.danger;
                             } else {
                               icon = Icons.money_rounded;
-                              iconColor = transType == 'receive' ? AppColors.danger : AppColors.success;
+                              iconColor = transType == 'receive'
+                                  ? AppColors.danger
+                                  : AppColors.success;
                             }
 
                             return Card(
                               margin: const EdgeInsets.only(bottom: 8),
                               child: ListTile(
                                 leading: CircleAvatar(
-                                  backgroundColor: iconColor.withOpacity(0.1),
+                                  backgroundColor:
+                                      iconColor.withValues(alpha: 0.1), // ✅ withValues
                                   child: Icon(icon, color: iconColor),
                                 ),
                                 title: Text(
@@ -274,15 +306,18 @@ class _AccountStatementScreenState extends State<AccountStatementScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      '$amountPrefix${amount.toStringAsFixed(2)} د.أ',
+                                      '$amountPrefix${amount.toStringAsFixed(2)} $_currencySymbol',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         color: amountColor,
                                       ),
                                     ),
                                     Text(
-                                      'الرصيد: ${balance.toStringAsFixed(2)}',
-                                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                      'الرصيد: ${balance.toStringAsFixed(2)} $_currencySymbol',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey,
+                                      ),
                                     ),
                                   ],
                                 ),

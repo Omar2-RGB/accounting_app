@@ -38,24 +38,29 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
       final contacts = await dbHelper.getAllContacts();
       final currencies = await dbHelper.getAllCurrencies();
 
-      setState(() {
-        _contacts = contacts;
-        _currencies = currencies;
+      // ✅ التحقق من mounted قبل setState
+      if (mounted) {
+        setState(() {
+          _contacts = contacts;
+          _currencies = currencies;
 
-        if (currencies.isNotEmpty) {
-          final defaultCurr = currencies.firstWhere(
-            (c) => c['is_default'] == 1,
-            orElse: () => currencies.first,
-          );
-          _selectedCurrencyId = defaultCurr['id'];
-          _currencySymbol = defaultCurr['symbol'] ?? 'د.أ';
-          _currencyRate = defaultCurr['exchange_rate'] as double? ?? 1.0;
-        }
-      });
+          if (currencies.isNotEmpty) {
+            final defaultCurr = currencies.firstWhere(
+              (c) => c['is_default'] == 1,
+              orElse: () => currencies.first,
+            );
+            _selectedCurrencyId = defaultCurr['id'];
+            _currencySymbol = defaultCurr['symbol'] ?? 'د.أ';
+            _currencyRate = defaultCurr['exchange_rate'] as double? ?? 1.0;
+          }
+        });
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في التحميل: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في التحميل: $e')),
+        );
+      }
     }
   }
 
@@ -93,21 +98,32 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
         'created_at': DateTime.now().toIso8601String(),
       });
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تم تسجيل الدين بنجاح 🎉'),
-          backgroundColor: AppColors.success,
-        ),
-      );
-      Navigator.pop(context, true);
+      // ✅ التحقق من mounted قبل استخدام context
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم تسجيل الدين بنجاح 🎉'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        Navigator.pop(context, true);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.danger),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.danger),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _noteController.dispose();
+    super.dispose();
   }
 
   @override
@@ -210,7 +226,10 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
                           firstDate: DateTime(2020),
                           lastDate: DateTime.now(),
                         );
-                        if (date != null) setState(() => _selectedDate = date);
+                        // ✅ التحقق من mounted قبل setState
+                        if (date != null && mounted) {
+                          setState(() => _selectedDate = date);
+                        }
                       },
                     ),
                     const SizedBox(height: 16),

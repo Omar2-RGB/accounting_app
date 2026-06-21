@@ -13,15 +13,31 @@ class _AccountMovementReportState extends State<AccountMovementReport> {
   List<Map<String, dynamic>> _data = [];
   bool _isLoading = true;
   String? _errorMessage;
+  String _currencySymbol = 'د.أ';
 
   @override
   void initState() {
     super.initState();
+    _loadCurrencySymbol();
     _loadData();
   }
 
+  Future<void> _loadCurrencySymbol() async {
+    try {
+      final dbHelper = DatabaseHelper.instance;
+      final defaultCurrency = await dbHelper.getDefaultCurrency();
+      if (mounted && defaultCurrency != null) {
+        setState(() {
+          _currencySymbol = defaultCurrency['symbol'] ?? 'د.أ';
+        });
+      }
+    } catch (e) {
+      // تجاهل
+    }
+  }
+
   Future<void> _loadData() async {
-    setState(() {
+    if (mounted) setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
@@ -29,8 +45,6 @@ class _AccountMovementReportState extends State<AccountMovementReport> {
     try {
       final dbHelper = DatabaseHelper.instance;
       final contacts = await dbHelper.getAllContacts();
-      final defaultCurrency = await dbHelper.getDefaultCurrency();
-      final symbol = defaultCurrency?['symbol'] ?? 'د.أ';
 
       for (var contact in contacts) {
         final contactId = contact['id'];
@@ -41,7 +55,6 @@ class _AccountMovementReportState extends State<AccountMovementReport> {
         double periodBalance = 0.0;
         double finalBalance = 0.0;
 
-        // حساب المبالغ المحولة للعملة الأساسية
         for (var inv in invoices) {
           final amountInBase = (inv['grand_total'] as double) * (inv['currency_rate'] as double);
           if (inv['type'] == 'sale') {
@@ -64,18 +77,22 @@ class _AccountMovementReportState extends State<AccountMovementReport> {
         contact['previous_balance'] = previousBalance;
         contact['period_balance'] = periodBalance;
         contact['final_balance'] = finalBalance;
-        contact['currency_symbol'] = symbol;
+        contact['currency_symbol'] = _currencySymbol;
       }
 
-      setState(() {
-        _data = contacts;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _data = contacts;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'خطأ: $e';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'خطأ: $e';
+          _isLoading = false;
+        });
+      }
     }
   }
 
