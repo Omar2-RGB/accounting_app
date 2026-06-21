@@ -20,14 +20,11 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
-// 🚀 الفرمان العسكري المترجم للغة Kotlin DSL 
+// 🚀 فرمان الجيل التاسع (AGP 9.0+ Compliant Override)
 subprojects {
     afterEvaluate {
-        extensions.findByName("android")?.let { ext ->
-            (ext as? com.android.build.gradle.BaseExtension)?.let { android ->
-                android.compileSdkVersion(36)
-                android.targetSdkVersion(36)
-            }
+        extensions.findByType<com.android.build.api.dsl.LibraryExtension>()?.apply {
+            compileSdk = 36
         }
     }
 }
