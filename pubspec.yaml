@@ -4,35 +4,49 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.12.0
+  sdk: ">=3.0.0 <4.0.0"   # ✅ تم التعديل لضمان التوافق مع بيئات البناء
 
 dependencies:
   flutter:
     sdk: flutter
+
+  # المصادقة والتواصل
   url_launcher: ^6.3.0
   google_sign_in: ^6.2.1
   http: ^1.2.0
   extension_google_sign_in_as_googleapis_auth: ^2.0.10
   googleapis: ^13.1.0
+
+  # دعم اللغة العربية
   flutter_localizations:
     sdk: flutter
   intl: ^0.20.2
+
+  # أساسيات
   cupertino_icons: ^1.0.8
+
+  # قاعدة البيانات (SQLite) مع دعم الويب وسطح المكتب
   sqflite: ^2.4.3
   sqflite_common_ffi: ^2.3.4
   sqflite_common_ffi_web: ^0.4.5
   path_provider: ^2.1.6
   path: ^1.9.0
+
+  # طباعة وتصدير PDF
   pdf: ^3.13.0
   printing: ^5.15.0
-  file_picker: ^8.1.4   # ✅ تم التغيير من ^11.0.2
+
+  # اختيار الملفات (للنسخ الاحتياطي)
+  file_picker: ^8.1.4   # ✅ إصدار مستقر ومتوافق
+
+  # مشاركة الملفات
   share_plus: ^10.1.4
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  flutter_launcher_icons: ^0.14.3   # ✅ أضف هذه الحزمة
+  flutter_launcher_icons: ^0.14.3   # ✅ أيقونات التطبيق
 
 flutter:
   uses-material-design: true
@@ -40,7 +54,7 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icon/app_icon.png"          # مسار الصورة الأساسية (يجب أن تكون 1024×1024 بكسل)
-  adaptive_icon_background: "#1A73E8"              # لون خلفية الأيقونة المتكيفة (Android)
-  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"  # اختياري، الصورة الأمامية للأيقونة المتكيفة
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#1A73E8"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"   # (اختياري)
   remove_alpha_ios: true
