@@ -24,7 +24,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.accounting_app"
-        minSdk = flutter.minSdkVersion
+        minSdk = 23 // ✅ إجبار المشروع على العمل بحد أدنى 23 (Android 6.0)
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
