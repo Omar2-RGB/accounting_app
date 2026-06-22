@@ -1,15 +1,16 @@
-import 'dart:io';
+import 'dart:io' as dart_io; // ✅ اكتفينا بالاسم المستعار فقط ومنعنا التعارض من الجذور
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
-import 'dart:io' as dart_io; // 👈 أضفنا لها اسم مستعار
+
 class GoogleDriveService {
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: [drive.DriveApi.driveFileScope],
   );
-static Future<drive.DriveApi?> _getDriveApi() async {
+
+  static Future<drive.DriveApi?> _getDriveApi() async {
     try {
       // 1. التحقق من المستخدم
       GoogleSignInAccount? account = _googleSignIn.currentUser ?? await _googleSignIn.signInSilently();
@@ -22,7 +23,7 @@ static Future<drive.DriveApi?> _getDriveApi() async {
       
       if (token == null) return null;
 
-      // 3. إنشاء العميل يدوياً (تجنب التوسعات التي تسبب تضارب)
+      // 3. إنشاء العميل يدوياً
       final client = _AuthenticatedClient({'Authorization': 'Bearer $token'});
       return drive.DriveApi(client);
     } catch (e) {
@@ -30,12 +31,14 @@ static Future<drive.DriveApi?> _getDriveApi() async {
       return null;
     }
   }
+
   static Future<String?> uploadBackup(String filePath, {String fileName = 'accounting_backup.json'}) async {
     try {
       final driveApi = await _getDriveApi();
       if (driveApi == null) return null;
 
-      final File file = File(filePath);
+      // ✅ استخدام dart_io.File الصريح
+      final dart_io.File file = dart_io.File(filePath);
       if (!await file.exists()) {
         debugPrint('❌ الملف غير موجود: $filePath');
         return null;
@@ -47,7 +50,7 @@ static Future<drive.DriveApi?> _getDriveApi() async {
       );
       if (existingFiles.files != null) {
         for (var f in existingFiles.files!) {
-          await driveApi.files.delete(f.id!);
+          if (f.id != null) await driveApi.files.delete(f.id!);
         }
       }
 
@@ -82,37 +85,35 @@ static Future<drive.DriveApi?> _getDriveApi() async {
     }
   }
 
-  // ✅ النسخة المصححة من downloadBackup
+  // ✅ النسخة المصححة والمحصنة من downloadBackup
   static Future<String?> downloadBackup(String fileId) async {
     try {
       final driveApi = await _getDriveApi();
       if (driveApi == null) return null;
 
-      // جلب معلومات الملف
       final drive.File fileInfo = await driveApi.files.get(fileId) as drive.File;
       final String fileName = fileInfo.name ?? 'backup_restored.json';
 
-      final Directory directory = await getApplicationDocumentsDirectory();
+      // ✅ استخدام dart_io.Directory الصريح
+      final dart_io.Directory directory = await getApplicationDocumentsDirectory();
       final String savePath = '${directory.path}/$fileName';
 
-      // تحميل الملف
       final response = await driveApi.files.get(
         fileId,
         downloadOptions: drive.DownloadOptions.fullMedia,
       );
 
-      // ✅ معالجة response بشكل صحيح (تحويل إلى List<int>)
       final List<int> bytes;
       if (response is List<int>) {
         bytes = response;
       } else if (response is drive.Media) {
-        // إذا كان response من نوع Media، نقوم بتحويله إلى List<int>
         bytes = await response.stream.expand((e) => e).toList();
       } else {
         throw Exception('نوع الاستجابة غير معروف: ${response.runtimeType}');
       }
 
-      final File file = File(savePath);
+      // ✅ استخدام dart_io.File الصريح
+      final dart_io.File file = dart_io.File(savePath);
       await file.writeAsBytes(bytes);
 
       debugPrint('✅ تم تحميل الملف إلى: $savePath');
@@ -143,9 +144,7 @@ static Future<drive.DriveApi?> _getDriveApi() async {
   }
 }
 
-// ============================================================
 // عميل HTTP موثق
-// ============================================================
 class _AuthenticatedClient extends http.BaseClient {
   final Map<String, String> _headers;
   final http.Client _inner = http.Client();
