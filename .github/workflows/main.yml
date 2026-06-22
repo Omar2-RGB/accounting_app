@@ -1,46 +1,8 @@
-name: Build Flutter APK
-
-on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Clone repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          # 🚀 السحر هنا: مسحنا سطر الإصدار! الآن سيسحب أحدث SDK مستقر في العالم دائماً
-
-      - name: Clean and Install dependencies
+- name: Clean and Upgrade dependencies
         run: |
           flutter clean
+          # مسح ملف الـ Lock القديم لإجبار فلاتر على إعادة حل الاعتماديات من الصفر
+          rm -f pubspec.lock
+          # تحديث كل الحزم لأحدث إصدارات متوافقة مع SDK 36
+          flutter pub upgrade --major-versions
           flutter pub get
-
-      - name: Bulletproof compileSdk patch
-        run: |
-          sed -i 's/compileSdk = 34/compileSdk = 36/g' android/app/build.gradle.kts || true
-          sed -i 's/targetSdk = 34/targetSdk = 36/g' android/app/build.gradle.kts || true
-          sed -i 's/compileSdk 34/compileSdk 36/g' android/app/build.gradle || true
-          sed -i 's/targetSdk 34/targetSdk 36/g' android/app/build.gradle || true
-
-      - name: Build APK
-        run: flutter build apk --release
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
