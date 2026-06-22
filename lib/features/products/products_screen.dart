@@ -61,6 +61,142 @@ class _ProductsScreenState extends State<ProductsScreen> {
     }
   }
 
+  // ========== إضافة منتج جديد ==========
+  Future<void> _addProduct(Map<String, dynamic> productData) async {
+    try {
+      final dbHelper = DatabaseHelper.instance;
+      // ✅ التصحيح: استخدم addProduct
+      await dbHelper.addProduct(productData);
+      await _loadProducts();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم إضافة المنتج بنجاح'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.danger),
+        );
+      }
+    }
+  }
+
+  void _showAddProductDialog() {
+    final nameController = TextEditingController();
+    final priceController = TextEditingController();
+    final quantityController = TextEditingController();
+    final skuController = TextEditingController();
+    final categoryController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('إضافة منتج جديد'),
+        content: Form(
+          key: formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'اسم المنتج *'),
+                  validator: (v) =>
+                      v == null || v.trim().isEmpty ? 'مطلوب' : null,
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: priceController,
+                  decoration: const InputDecoration(labelText: 'السعر'),
+                  keyboardType:
+                      TextInputType.numberWithOptions(decimal: true),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return null;
+                    if (double.tryParse(v.trim()) == null) {
+                      return 'رقم غير صالح';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: quantityController,
+                  decoration: const InputDecoration(labelText: 'الكمية الأولية'),
+                  keyboardType:
+                      TextInputType.numberWithOptions(decimal: true),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return null;
+                    if (double.tryParse(v.trim()) == null) {
+                      return 'رقم غير صالح';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: skuController,
+                  decoration: const InputDecoration(labelText: 'SKU (كود)'),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: categoryController,
+                  decoration: const InputDecoration(labelText: 'التصنيف'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              nameController.dispose();
+              priceController.dispose();
+              quantityController.dispose();
+              skuController.dispose();
+              categoryController.dispose();
+              Navigator.pop(context);
+            },
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                final productData = <String, dynamic>{
+                  'name': nameController.text.trim(),
+                  'price':
+                      double.tryParse(priceController.text.trim()) ?? 0.0,
+                  'quantity':
+                      double.tryParse(quantityController.text.trim()) ?? 0.0,
+                  'sku': skuController.text.trim(),
+                  'category': categoryController.text.trim(),
+                  'description': '',
+                  'cost': 0.0,
+                  'created_at': DateTime.now().toIso8601String(),
+                };
+
+                nameController.dispose();
+                priceController.dispose();
+                quantityController.dispose();
+                skuController.dispose();
+                categoryController.dispose();
+
+                Navigator.pop(context);
+                _addProduct(productData);
+              }
+            },
+            child: const Text('حفظ'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _addStock(int productId, double quantity) async {
     try {
       final dbHelper = DatabaseHelper.instance;
@@ -189,7 +325,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
       ),
       body: Column(
         children: [
-          // ✅ شريط البحث
+          // شريط البحث
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
@@ -215,7 +351,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               },
             ),
           ),
-          // ✅ قائمة المنتجات
+          // قائمة المنتجات
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -229,7 +365,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           final id = product['id'] as int;
                           final name = product['name'] ?? '';
                           final price = product['price'] as double? ?? 0.0;
-                          final quantity = product['quantity'] as double? ?? 0.0;
+                          final quantity =
+                              product['quantity'] as double? ?? 0.0;
                           final sku = product['sku'] ?? '';
                           final category = product['category'] ?? '';
 
@@ -237,40 +374,46 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             margin: const EdgeInsets.only(bottom: 8),
                             child: ListTile(
                               leading: CircleAvatar(
-                                backgroundColor: AppColors.primary.withValues(alpha: 0.1), // ✅ withValues
-                                child: Icon(Icons.inventory_2, color: AppColors.primary),
+                                backgroundColor: AppColors.primary
+                                    .withValues(alpha: 0.1),
+                                child: Icon(Icons.inventory_2,
+                                    color: AppColors.primary),
                               ),
-                              title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              title: Text(name,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold)),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  if (category.isNotEmpty) Text('التصنيف: $category'),
-                                  Text('السعر: $price $_currencySymbol | الكمية: $quantity'),
+                                  if (category.isNotEmpty)
+                                    Text('التصنيف: $category'),
+                                  Text(
+                                      'السعر: $price $_currencySymbol | الكمية: $quantity'),
                                   if (sku.isNotEmpty)
-                                    Text('SKU: $sku', style: const TextStyle(fontSize: 10)),
+                                    Text('SKU: $sku',
+                                        style: const TextStyle(fontSize: 10)),
                                 ],
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.add_box, color: Colors.blue),
-                                    onPressed: () => _showAddStockDialog(id),
+                                    icon: const Icon(Icons.add_box,
+                                        color: Colors.blue),
+                                    onPressed: () =>
+                                        _showAddStockDialog(id),
                                     tooltip: 'إضافة مخزون',
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.edit, color: Colors.orange),
+                                    icon: const Icon(Icons.edit,
+                                        color: Colors.orange),
                                     onPressed: () {
-                                      // TODO: شاشة تعديل المنتج
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('سيتم إضافة تعديل المنتجات قريباً'),
-                                        ),
-                                      );
+                                      // TODO: شاشة تعديل المنتج (يمكن تجاهله حالياً)
                                     },
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.delete, color: AppColors.danger),
+                                    icon: const Icon(Icons.delete,
+                                        color: AppColors.danger),
                                     onPressed: () => _deleteProduct(id),
                                   ),
                                 ],
@@ -283,14 +426,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: فتح شاشة إضافة منتج
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('سيتم إضافة منتج جديد قريباً'),
-            ),
-          );
-        },
+        onPressed: _showAddProductDialog,
         child: const Icon(Icons.add),
       ),
     );
