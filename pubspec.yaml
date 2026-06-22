@@ -37,7 +37,7 @@ dependencies:
   printing: ^5.15.0
 
   # ✅ تم تثبيت إصدار مستقر من file_picker
-  file_picker: ^6.2.1   # أو يمكنك تعطيله مؤقتاً إذا استمرت المشكلة
+  file_picker: ^8.3.7  # ✅ هذا الإصدار هو الذي سيعمل مع فلاتر الحديثة
   share_plus: ^10.1.4
 
 dev_dependencies:
