@@ -9,21 +9,27 @@ class GoogleDriveService {
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: [drive.DriveApi.driveFileScope],
   );
-
-  static Future<drive.DriveApi?> _getDriveApi() async {
+static Future<drive.DriveApi?> _getDriveApi() async {
     try {
-      final GoogleSignInAccount? account = await _googleSignIn.signIn();
+      // 1. التحقق من المستخدم
+      GoogleSignInAccount? account = _googleSignIn.currentUser ?? await _googleSignIn.signInSilently();
+      account ??= await _googleSignIn.signIn();
       if (account == null) return null;
 
-      final Map<String, String> headers = await account.authHeaders;
-      final client = _AuthenticatedClient(headers);
+      // 2. الطريقة الصحيحة في إصدار 7.x للوصول للـ Authentication
+      final auth = await account.authentication;
+      final token = auth.accessToken;
+      
+      if (token == null) return null;
+
+      // 3. إنشاء العميل يدوياً (تجنب التوسعات التي تسبب تضارب)
+      final client = _AuthenticatedClient({'Authorization': 'Bearer $token'});
       return drive.DriveApi(client);
     } catch (e) {
-      debugPrint('❌ خطأ في الاتصال بـ Google Drive: $e');
+      debugPrint('❌ خطأ في الاتصال: $e');
       return null;
     }
   }
-
   static Future<String?> uploadBackup(String filePath, {String fileName = 'accounting_backup.json'}) async {
     try {
       final driveApi = await _getDriveApi();
@@ -143,7 +149,6 @@ class GoogleDriveService {
 class _AuthenticatedClient extends http.BaseClient {
   final Map<String, String> _headers;
   final http.Client _inner = http.Client();
-
   _AuthenticatedClient(this._headers);
 
   @override
