@@ -5,26 +5,17 @@ allprojects {
     }
 }
 
-val newBuildDir: Directory =
-    rootProject.layout.buildDirectory
-        .dir("../../build")
-        .get()
+val newBuildDir: Directory = rootProject.layout.buildDirectory.dir("../../build").get()
 rootProject.layout.buildDirectory.value(newBuildDir)
 
 subprojects {
-    val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
-    project.layout.buildDirectory.value(newSubprojectBuildDir)
-}
-
-subprojects {
-    project.evaluationDependsOn(":app")
-}
-
-// 🚀 الفرمان الذهبي المضمون لفرض SDK 36 على المكتبات الخارجية
-subprojects {
-    afterEvaluate { subProj ->
-        subProj.extensions.findByType<com.android.build.api.dsl.LibraryExtension>()?.apply {
-            compileSdk = 36
+    layout.buildDirectory.value(newBuildDir.dir(project.name))
+    
+    // الحل الأضمن: تطبيق الإعدادات فقط على مشاريع الأندرويد
+    afterEvaluate {
+        val android = extensions.findByName("android")
+        if (android is com.android.build.gradle.BaseExtension) {
+            android.compileSdkVersion(36)
         }
     }
 }
