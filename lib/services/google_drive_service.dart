@@ -12,15 +12,13 @@ class GoogleDriveService {
 
   static Future<drive.DriveApi?> _getDriveApi() async {
     try {
-      // ✅ الكود النظيف تماماً المتوافق مع GoogleSignIn v7
-      GoogleSignInAccount? account = await _googleSignIn.signInSilently();
+      GoogleSignInAccount? account = _googleSignIn.currentUser ?? await _googleSignIn.signInSilently();
       account ??= await _googleSignIn.signIn();
-      
       if (account == null) return null;
 
+      // ✅ هذه الطريقة مدعومة في الإصدار 6.3.0 وفي الإصدار 7.x
       final auth = await account.authentication;
       final token = auth.accessToken;
-
       if (token == null) return null;
 
       final client = _AuthenticatedClient({'Authorization': 'Bearer $token'});

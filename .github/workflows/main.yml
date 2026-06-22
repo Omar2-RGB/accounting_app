@@ -23,11 +23,9 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Clean and Upgrade dependencies
+      - name: Clean and Install dependencies
         run: |
           flutter clean
-          rm -f pubspec.lock
-          flutter pub upgrade --major-versions
           flutter pub get
 
       - name: Build APK
