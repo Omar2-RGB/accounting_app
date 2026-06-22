@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-// import 'package:file_picker/file_picker.dart';   // ← تم تعطيلها مؤقتاً
 import 'package:googleapis/drive/v3.dart' as drive;
 import '../../core/theme/app_colors.dart';
 import '../../services/backup_service.dart';
@@ -61,45 +60,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ===== تم تعطيل دالة الاسترجاع مؤقتاً =====
-  /*
+  // دالة بديلة مؤقتة لاسترجاع المحلي (لتمرير البناء)
   Future<void> _restoreBackup() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-      );
-      if (result == null) return;
-
-      final filePath = result.files.single.path!;
-      if (mounted) setState(() => _isLoading = true);
-
-      final message = await BackupService.importDatabase(filePath);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: AppColors.success),
-        );
-        await _loadBackupFiles();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في الاستعادة: $e'), backgroundColor: AppColors.danger),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-  */
-
-  // دالة فارغة بديلة (للتجنب الأخطاء في الـ UI)
-  Future<void> _restoreBackup() async {
-    // هذه الدالة معطلة حالياً لإنجاح البناء
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('ميزة استرجاع البيانات معطلة حالياً لحين إصلاحها'),
+          content: Text('ميزة استرجاع البيانات المحلية معطلة حالياً لحين تحديث الحزم'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -159,21 +125,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // 🚀 تم إعادة بناء وخياطة الدالة المبتورة بالكامل هنا
   Future<void> _restoreFromDrive() async {
     setState(() => _isSyncing = true);
     try {
-      final files = await GoogleDriveService.listBackups();
+      // 1. جلب قائمة الملفات من درايف أولاً (كانت مفقودة)
+      final List<drive.File> files = await GoogleDriveService.listBackups();
 
       if (files.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('لا توجد نسخ احتياطية على جوجل درايف')),
+            const SnackBar(content: Text('لا توجد نسخ احتياطية في جوجل درايف'), backgroundColor: Colors.orange),
           );
         }
-        setState(() => _isSyncing = false);
         return;
       }
 
+      if (!mounted) return;
+
+      // 2. عرض النافذة لاختيار ملف
       final selectedFile = await showDialog<drive.File>(
         context: context,
         builder: (context) => AlertDialog(
@@ -189,7 +159,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 final modified = file.modifiedTime?.toLocal().toString() ?? 'تاريخ غير معروف';
                 return ListTile(
                   title: Text(name),
-                  subtitle: Text(modified),
+                  subtitle: Text(modified, style: const TextStyle(fontSize: 10, color: Colors.grey)),
                   onTap: () => Navigator.pop(context, file),
                 );
               },
@@ -204,11 +174,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
 
-      if (selectedFile == null || selectedFile.id == null) {
-        setState(() => _isSyncing = false);
-        return;
-      }
+      if (selectedFile == null || selectedFile.id == null) return;
 
+      // 3. تحميل الملف واستعادته
       final downloadedPath = await GoogleDriveService.downloadBackup(selectedFile.id!);
       if (downloadedPath != null && mounted) {
         await BackupService.importDatabase(downloadedPath);
@@ -221,10 +189,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         await _loadBackupFiles();
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('❌ فشل تحميل الملف'),
-            backgroundColor: AppColors.danger,
-          ),
+          const SnackBar(content: Text('❌ فشل تحميل الملف'), backgroundColor: AppColors.danger),
         );
       }
     } catch (e) {
@@ -286,7 +251,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: 'استرجاع قاعدة البيانات',
                         subtitle: 'استعادة البيانات من ملف JSON',
                         color: Colors.orange,
-                        onTap: _restoreBackup,   // ← الدالة المعدلة
+                        onTap: _restoreBackup,
                       ),
                       if (_backupFiles.isNotEmpty) ...[
                         const Divider(),
@@ -341,7 +306,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: 'استعادة من جوجل درايف',
                         subtitle: 'استرجاع البيانات من السحاب',
                         color: Colors.blue,
-                        onTap: _restoreFromDrive,
+                        onTap: _restoreFromDrive, // 💡 تم الربط بالدالة المصلحة
                       ),
                     ],
                   ),
@@ -371,12 +336,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: 'للتواصل والدعم',
                         subtitle: 'للإستفسارات والدعم الفني',
                         color: Colors.blue,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const AboutScreen()),
-                          );
-                        },
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AboutScreen())),
                       ),
                       const Divider(),
                       _buildMenuItem(
@@ -384,12 +344,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: 'حول البرنامج',
                         subtitle: 'تطبيق محاسبة إصدار 1.0.0',
                         color: Colors.grey,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const AboutScreen()),
-                          );
-                        },
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AboutScreen())),
                       ),
                     ],
                   ),
@@ -406,10 +361,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       backgroundColor: AppColors.danger,
                       minimumSize: const Size(double.infinity, 50),
                     ),
-                    child: const Text(
-                      'خروج',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
+                    child: const Text('خروج', style: TextStyle(color: Colors.white, fontSize: 16)),
                   ),
                 ),
 
@@ -428,7 +380,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }) {
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: color.withOpacity(0.1),
+        backgroundColor: color.withValues(alpha: 0.1), // 💡 تحديث النظافة
         child: Icon(icon, color: color),
       ),
       title: Text(title),

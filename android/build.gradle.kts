@@ -20,6 +20,15 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
+// 🚀 الفرمان الذهبي المضمون لفرض SDK 36 على المكتبات الخارجية
+subprojects {
+    afterEvaluate { subProj ->
+        subProj.extensions.findByType<com.android.build.api.dsl.LibraryExtension>()?.apply {
+            compileSdk = 36
+        }
+    }
+}
+
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
